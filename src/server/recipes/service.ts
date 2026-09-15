@@ -177,8 +177,9 @@ export async function listRecipes(
  * A food id the user cannot see is dropped, not rejected, and reported back —
  * the recipe still saves, and the caller learns which link did not take.
  *
- * Grams precedence: a mass unit is exact and wins; then volume × density; an
- * explicitly supplied weight is used only when the unit cannot say.
+ * Grams precedence: a mass unit is exact and wins; then volume × density; then
+ * the food's measured portions ("1 quả trứng" → a medium egg). An explicitly
+ * supplied weight is used only when none of those can say.
  */
 async function resolveIngredients(
   db: Pick<Db, 'select'>,
@@ -193,7 +194,7 @@ async function resolveIngredients(
     const food = line.foodId ? visible.get(line.foodId) : undefined
     if (line.foodId && !food) droppedFoodIds.push(line.foodId)
 
-    const fromUnit = gramsFor(line.quantity, line.quantityMax, line.unit, food?.densityGPerMl)
+    const fromUnit = gramsFor(line.quantity, line.quantityMax, line.unit, food)
     const grams = fromUnit?.grams ?? line.grams ?? null
     const gramsSource = fromUnit?.source ?? (line.grams != null ? ('estimate' as const) : null)
 

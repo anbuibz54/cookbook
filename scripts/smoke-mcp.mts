@@ -107,6 +107,43 @@ const bad = await call('create_recipe', {
 })
 assert(bad.startsWith('Rejected'), 'invalid input is rejected with a message, not a crash')
 
+// ── Reference data (needs `pnpm foods:import` to have run) ──────────────────
+// Count and volume units resolved from USDA portions and density, no guessing.
+
+function idOnLineWith(body: string, label: string): string {
+  const line = body.split('\n').find((l) => l.includes(label))
+  if (!line) throw new Error(`No "${label}" in:\n${body}`)
+  return firstUuid(line)
+}
+
+const eggs = await call('search_foods', { query: 'trung ga' })
+assert(eggs.includes('trứng gà (Egg, whole, raw, fresh)'), 'Vietnamese search finds the USDA egg')
+assert(eggs.includes('1 medium = 44 g'), 'USDA portions are listed')
+const egg = idOnLineWith(eggs, 'trứng gà (Egg, whole, raw, fresh)')
+const garlic = idOnLineWith(await call('search_foods', { query: 'tỏi' }), 'tỏi (Garlic, raw)')
+const butter = idOnLineWith(await call('search_foods', { query: 'bo lat' }), 'bơ lạt (Butter, without salt)')
+
+const usdaRecipe = await call('create_recipe', {
+  title: '[smoke] Trứng chiên bơ tỏi',
+  servings: 1,
+  authored_by: 'ai',
+  ingredients: [
+    { name: 'trứng gà', quantity: 2, unit: 'quả', food_id: egg },
+    { name: 'tỏi', quantity: 3, unit: 'tép', food_id: garlic },
+    { name: 'bơ lạt', quantity: 2, unit: 'muỗng canh', food_id: butter },
+  ],
+  steps: [{ body: 'Phi tỏi với bơ, đập trứng vào chiên.' }],
+})
+const usdaId = firstUuid(usdaRecipe)
+const usdaFull = await call('get_recipe', { recipe_id: usdaId })
+
+// 2 medium eggs 88 g · 3 cloves 9 g · 30 ml butter × (227 g / 240 ml) = 28.4 g
+assert(usdaFull.includes('"grams": 88'), '2 quả trứng → 2 × medium egg (44 g)')
+assert(usdaFull.includes('"grams": 9'), '3 tép tỏi → 3 × clove (3 g)')
+assert(usdaFull.includes('"grams": 28.4'), '2 muỗng canh bơ → 30 ml × density from the cup portion')
+assert(usdaRecipe.includes('3/3 ingredients counted'), 'every line counted without supplied grams')
+assert(usdaRecipe.includes('Ước lượng'), 'typical portion sizes are reported as approximate')
+
 await client.close()
 
 if (process.argv.includes('--keep')) {

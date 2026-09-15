@@ -50,7 +50,7 @@ const ingredientShape = z.object({
   note: z.string().optional().describe('Prep or detail: "băm nhuyễn", "để ở nhiệt độ phòng".'),
   optional: z.boolean().optional().describe('True for "nếu thích" ingredients. Excluded from nutrition.'),
   food_id: z.string().optional().describe('Food id from search_foods / create_food. This is what makes nutrition work — link every ingredient that is not water or a negligible pinch.'),
-  grams: z.number().optional().describe('Estimated weight in grams of this line as written. REQUIRED for nutrition when the unit is a count or unknown (1 quả trứng ≈ 50, 1 củ hành tây ≈ 150, 1 tép tỏi ≈ 5). Ignored when the unit is already a mass.'),
+  grams: z.number().optional().describe('Estimated weight in grams of this line as written. Only used when the server cannot work it out: mass units are exact, and count units (quả, củ, tép, lát, cái…) use the food\'s measured portions when search_foods lists one. Give it for sizes that differ from typical ("1 củ hành tây to" ≈ 250) or when the food has no matching portion.'),
 })
 
 const stepShape = z.object({
@@ -177,7 +177,7 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         '',
         'Nutrition only works through food links. Before create_recipe, call search_foods for each real ingredient (search in Vietnamese or English, without diacritics is fine) and pass the food_id. If nothing fits, call create_food with source "ai_estimate" — and never label an estimate as anything better.',
         '',
-        'For count units (quả, củ, tép, cái) also pass `grams`, your best estimate of the weight. Mass units need nothing extra.',
+        'Count units (quả, củ, tép, lát, cái) are converted with the food\'s measured portions when it has them (search_foods lists them). Pass `grams` yourself only when the food has no matching portion or the size is clearly not typical.',
         '',
         'Before creating a recipe, call search_recipes to check it is not already saved; if it is, prefer update_recipe with a change_note.',
       ].join('\n'),
@@ -261,7 +261,7 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         'Checklist before calling:',
         '1. search_recipes — is it already saved? Then update_recipe instead.',
         '2. search_foods for each real ingredient and put the food_id on the line; create_food (source "ai_estimate") only when nothing fits.',
-        '3. For count units give `grams`.',
+        '3. For count units give `grams` when the linked food lists no matching portion.',
         '4. Set source_url and source_label whenever it came from a video, page or person.',
         '',
         'Write steps in your own words, one action per step, in Vietnamese. Do not paste a creator\'s text verbatim.',
@@ -366,9 +366,13 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
       description: [
         'Search the nutrition reference for an ingredient, to get a food_id for create_recipe / update_recipe.',
         '',
-        'Search short and generic: "trung ga" not "2 quả trứng gà ta". Try the English name if Vietnamese finds nothing. Diacritics are ignored.',
+        'Search short and generic: "trung ga" not "2 quả trứng gà ta". Every word must match, in any order. Diacritics are ignored.',
         '',
-        'Prefer sources in this order: usda / vn_fct (lab data) > label > ai_estimate. Values are per 100 g edible portion.',
+        'Two lab datasets are loaded: vn_fct (Bảng thành phần thực phẩm Việt Nam — Vietnamese names, covers rau răm, mắm tôm, giò lụa, lá lốt…) and usda (USDA FoodData Central — English descriptions like "Egg, whole, raw, fresh", ~270 common ones also have Vietnamese names). If a Vietnamese search finds nothing, try the English name.',
+        '',
+        'When both datasets match: if the recipe measures the ingredient by count or spoon (quả, tép, muỗng) pick the one that lists matching portions, so grams are worked out for you; otherwise prefer vn_fct for Vietnamese ingredients. Pick the raw / unprepared form unless the recipe uses a prepared one.',
+        '',
+        'Trust order: usda / vn_fct (lab data) > label > ai_estimate. Values are per 100 g edible portion.',
       ].join('\n'),
       inputSchema: {
         query: z.string().min(1).describe('Ingredient name, Vietnamese or English.'),
@@ -381,9 +385,20 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
       }
       return text(
         found
-          .map((f) =>
-            `${f.id}  ${foodLabel(f)}  [${f.source}]  ${round(f.kcal)} kcal, P ${round(f.proteinG, 1)} / F ${round(f.fatG, 1)} / C ${round(f.carbsG, 1)} per 100 g${f.densityGPerMl ? `, ${f.densityGPerMl} g/ml` : ''}`,
-          )
+          .map((f) => {
+            const portions = f.portions
+              .filter((p) => !/^(cup|floz|ml)$/.test(p.unit))
+              .slice(0, 5)
+              .map((p) => `1 ${p.label} = ${round(p.grams, 1)} g`)
+            return [
+              `${f.id}  ${foodLabel(f)}  [${f.source}]`,
+              `  ${round(f.kcal)} kcal, P ${round(f.proteinG, 1)} / F ${round(f.fatG, 1)} / C ${round(f.carbsG, 1)} per 100 g` +
+                (f.densityGPerMl ? `, ${round(f.densityGPerMl, 2)} g/ml` : ''),
+              portions.length ? `  portions: ${portions.join('; ')}` : null,
+            ]
+              .filter(Boolean)
+              .join('\n')
+          })
           .join('\n'),
       )
     },

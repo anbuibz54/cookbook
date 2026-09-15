@@ -56,9 +56,14 @@ export const foodSourceEnum = cookbook.enum('food_source', ['usda', 'vn_fct', 'l
  *
  *  - mass       quantity was already in g/kg/mg — exact
  *  - volume     ml/tsp/cup × the food's density — good
+ *  - portion    a measured portion weight from the food's data ("1 large egg
+ *               = 50 g") — good for volume, typical-size for counts
  *  - estimate   someone said "1 củ hành ≈ 80 g" — approximate
+ *
+ * `portion` was added after `estimate`; Postgres enums order by creation, so
+ * never sort on this column expecting best-first.
  */
-export const gramsSourceEnum = cookbook.enum('grams_source', ['mass', 'volume', 'estimate'])
+export const gramsSourceEnum = cookbook.enum('grams_source', ['mass', 'volume', 'estimate', 'portion'])
 
 /* -------------------------------------------------------------------------- */
 /* Users                                                                       */
@@ -102,9 +107,17 @@ export const foods = cookbook.table('foods', {
   /** The id in the source dataset (FDC id, VN table code). Null for label / AI. */
   sourceRef: text('source_ref'),
   nameVi: text('name_vi'),
+  /**
+   * False when `nameVi` was machine-translated (the USDA import's Vietnamese
+   * names are). The nutrient numbers are unaffected — only the label is
+   * unconfirmed. Flip to true once a person has looked at it.
+   */
+  nameViReviewed: boolean('name_vi_reviewed').notNull().default(false),
   nameEn: text('name_en'),
   aliases: text('aliases').array().notNull().default(sql`'{}'::text[]`),
   searchText: text('search_text').notNull(),
+  /** The source dataset's grouping, e.g. USDA "Vegetables and Vegetable Products". */
+  category: text('category'),
 
   kcal: real('kcal').notNull(),
   proteinG: real('protein_g').notNull(),
@@ -123,6 +136,26 @@ export const foods = cookbook.table('foods', {
   index('foods_user_id_idx').on(t.userId),
   // One row per source record, so re-running an import is an upsert.
   uniqueIndex('foods_source_ref_idx').on(t.source, t.sourceRef),
+])
+
+/**
+ * Measured weights of household portions for one food: "1 large" = 50 g for an
+ * egg, "1 clove" = 3 g for garlic, "1 cup" = 125 g for flour.
+ *
+ * This is what turns "2 quả trứng" or "3 tép tỏi" into grams without anyone
+ * guessing. `unit` is a normalised key (see `portionKey` in src/lib/units.ts):
+ * volume units (`cup`, `tbsp`, `tsp`, `ml`) or count words (`large`, `medium`,
+ * `clove`, `slice`, `leaf`…). `label` keeps the dataset's original wording.
+ * `grams` is per ONE unit.
+ */
+export const foodPortions = cookbook.table('food_portions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  foodId: uuid('food_id').notNull().references(() => foods.id, { onDelete: 'cascade' }),
+  unit: text('unit').notNull(),
+  label: text('label').notNull(),
+  grams: real('grams').notNull(),
+}, (t) => [
+  index('food_portions_food_idx').on(t.foodId, t.unit),
 ])
 
 /* -------------------------------------------------------------------------- */

@@ -23,7 +23,7 @@ export type NutritionLine = {
   name: string
   optional: boolean
   grams: number | null
-  gramsSource: 'mass' | 'volume' | 'estimate' | null
+  gramsSource: 'mass' | 'volume' | 'portion' | 'estimate' | null
   food: {
     source: 'usda' | 'vn_fct' | 'label' | 'ai_estimate'
     kcal: number
@@ -49,7 +49,8 @@ export type RecipeNutrition = {
   missing: string[]
   /**
    * good        every counted line is lab data with a measured weight
-   * approximate some weights are estimates, or some foods came off a label
+   * approximate some weights are estimates or typical portion sizes, or some
+ *             foods came off a label
    * rough       at least one food's numbers are an AI estimate
    */
   confidence: Confidence
@@ -91,7 +92,12 @@ export function computeNutrition(lines: NutritionLine[], servings: number): Reci
     total.sodiumMg += (f.sodiumMg ?? 0) * k
 
     if (f.source === 'ai_estimate') confidence = 'rough'
-    else if (confidence === 'good' && (f.source === 'label' || line.gramsSource === 'estimate')) {
+    // A portion weight is measured data but assumes a typical size — "1 củ
+    // hành" can be half or double a USDA medium onion — so it counts as approximate.
+    else if (
+      confidence === 'good' &&
+      (f.source === 'label' || line.gramsSource === 'estimate' || line.gramsSource === 'portion')
+    ) {
       confidence = 'approximate'
     }
   }

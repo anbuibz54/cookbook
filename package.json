@@ -12,7 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "mcp:token": "tsx --env-file=.env.local scripts/mint-token.mts",
-    "mcp:smoke": "tsx --env-file=.env.local scripts/smoke-mcp.mts"
+    "mcp:smoke": "tsx --env-file=.env.local scripts/smoke-mcp.mts",
+    "foods:import": "tsx --env-file=.env.local scripts/import-foods.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
