@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/*
+ * Placeholder tokens. The cookbook's real visual design is still to be
+ * decided — keep styling in these variables so the redesign is one file.
+ */
+:root {
+  --background: #f7f6f2;
+  --surface: #ffffff;
+  --foreground: #23201b;
+  --muted: #6b645a;
+  --line: #e4dfd5;
+  --accent: #b5542f;
+  --accent-soft: #f5e3da;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #171512;
+    --surface: #211e1a;
+    --foreground: #ede8df;
+    --muted: #a59d90;
+    --line: #36312a;
+    --accent: #e48a63;
+    --accent-soft: #3a261d;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-be-vietnam), system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
