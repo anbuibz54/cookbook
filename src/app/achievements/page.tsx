@@ -51,7 +51,20 @@ export default async function AchievementsPage() {
   return (
     <PageTransition>
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-[18px] pt-6 pb-32">
-        <h1 className="font-display text-[32px] leading-none font-extrabold">Thành tích</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-display text-[32px] leading-none font-extrabold">Thành tích</h1>
+          <Link
+            href="/share"
+            transitionTypes={['nav-forward']}
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink bg-surface px-3.5 text-[13px] font-medium shadow-pop-sm"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3v12M7 8l5-5 5 5" />
+              <path d="M5 14v6h14v-6" />
+            </svg>
+            Chia sẻ tháng {stats.month}
+          </Link>
+        </div>
 
         <div className="grid grid-cols-3 gap-2.5">
           {[

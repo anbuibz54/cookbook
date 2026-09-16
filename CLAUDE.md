@@ -151,7 +151,7 @@ shop needs web search and local knowledge, so it is Claude's, through
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
 "Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
-2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done) → 4 reminders (done)
+2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done) → 4 reminders (done) → 5 share card (done)
 (multi-provider, keys encrypted per user) → 4 web push reminders per streak
 → 5 monthly share card.
 
@@ -262,6 +262,22 @@ ships one.
 - Testing: Chromium incognito (Playwright's default context) has no Push API;
   use a persistent profile. A real send through FCM worked from there.
 
+## Share card (phase 5, built 2026-09-16)
+
+- `/share?m=YYYY-MM` (from "Chia sẻ tháng" on Thành tích) previews the PNG
+  from `/api/share/month` (next/og, 1080×1350 = the 432×540 mockup at 2.5×).
+- Numbers come from `src/server/motivation/recap.ts`, which reuses the same
+  derivations as Thành tích — the card never claims what the app does not show.
+  "Chuỗi đang giữ" only appears for the current month.
+- **Fonts**: static TTFs in `assets/fonts/` (OFL, from Google Fonts). The
+  renderer reads neither woff2 nor variable fonts, and its default font has no
+  Vietnamese marks. They are read via `process.cwd()`, which file tracing
+  cannot follow — `outputFileTracingIncludes` in next.config.ts ships them.
+- Photos are read from private Storage and inlined as data URIs.
+- The client fetches the PNG BEFORE the tap, so "Chia sẻ" can open the iOS
+  share sheet inside the gesture; browsers that cannot share files get
+  "Lưu ảnh" (download).
+
 ## MCP (`src/server/mcp/server.ts`)
 
 Fourteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
@@ -328,7 +344,7 @@ the energy bar is only readable by colour. Light mode only; cook mode gets its
 own dark screen rather than an inverted theme.
 
 Screens built: `/` "Hôm nay" (log CTA + journal feed; settings via the gear),
-`/log`, `/journal/[id]`, `/achievements` + streak/goal/wish forms, `/recipes` list, `/recipes/[id]` detail (servings
+`/log`, `/journal/[id]`, `/achievements` + streak/goal/wish forms, `/share`, `/recipes` list, `/recipes/[id]` detail (servings
 stepper scales quantities client-side; per-serving nutrition stays fixed),
 `/recipes/[id]/cook` cook mode (last step → `/log?recipe=`),
 `/pantry`, `/shopping`, `/recipes/new` (explains that recipes arrive via

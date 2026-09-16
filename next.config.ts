@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '5mb',
     },
   },
+  // The share card reads its fonts from disk at runtime; file tracing cannot
+  // see a path built with process.cwd(), so name them here or Vercel ships
+  // the route without them.
+  outputFileTracingIncludes: {
+    '/api/share/month': ['./assets/fonts/**'],
+  },
 };
 
 export default nextConfig;
