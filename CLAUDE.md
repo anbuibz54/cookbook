@@ -200,6 +200,19 @@ stepper scales quantities client-side; per-serving nutrition stays fixed),
 `/pantry`, `/shopping`, `/recipes/new` (explains that recipes arrive via
 Claude), `/settings` (reached from the home card, not the tab bar).
 
+### Navigation
+
+- **Tab bar lives in the root layout** (`TabBar`, shown only on `/`, `/recipes`,
+  `/pantry`, `/shopping`, `/settings`). Pages under it pad with `pb-32`. Do not
+  render it from a page again — it would slide with the page.
+- **Every page wraps its root in `<PageTransition>`**, and every internal link
+  says what kind of move it is: `transitionTypes={['nav-forward']}` going deeper,
+  `['nav-back']` coming out, `['tab']` between tabs. A new link without a type
+  simply does not animate — acceptable, but tag it.
+- **Every database-backed route has a `loading.tsx`** in the shape of the real
+  screen (`src/components/skeleton.tsx`). Without one, a tap waits silently for
+  the server. Cook mode's skeleton is dark on purpose.
+
 ### Cook mode
 
 Its own dark screen (`--cook-*` tokens), not an inverted theme. Three things
