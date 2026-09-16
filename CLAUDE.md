@@ -217,6 +217,24 @@ that are easy to get wrong and are already decided:
 **Conservative on purpose: a missing line is fine, a wrong one is not.**
 `pnpm check:cook` locks that behaviour in, including two accepted misses.
 
+## Phone: installable web app, not native (decided 2026-09-16)
+
+Installable PWA: `src/app/manifest.ts`, icons drawn at build time
+(`icon.tsx`, `apple-icon.tsx`, `icon-maskable/route.tsx` — no image files to
+keep in sync), offline reading via `public/sw.js` (network first, cache as
+fallback; never `/api/`, never a URL with a query string). iOS needs BOTH the
+manifest and `appleWebApp.capable` in layout metadata, or an installed icon
+opens in a browser tab. `proxy.ts` must keep excluding these paths — a manifest
+redirected to /login silently kills installability.
+
+**What a PWA cannot do, and why native is still on the table:** no alarm when a
+timer ends while the app is closed (the 45-minute bake), no share sheet from
+TikTok/YouTube, no widgets. Native would mean rewriting the UI in React Native
+plus an API layer, and on iPhone either 99 USD/year or reinstalling every 7
+days. Decide after the user has cooked with it a few times — the expected
+verdict is that only the timer alarm is missed, which an Expo shell around this
+web UI could add without a rewrite.
+
 ## Deferred — do not build yet
 - In-app AI (Claude API): paste text/photo → structured recipe, suggestions.
   Wanted, not yet scoped.

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Baloo_2, JetBrains_Mono, Lexend } from 'next/font/google'
+import { ServiceWorker } from '@/components/service-worker'
 import './globals.css'
 
 /**
@@ -31,11 +32,21 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'Sổ công thức',
-  description: 'Sổ công thức nấu ăn của riêng mình.',
+  description: 'Sổ công thức nấu ăn, tủ lạnh và đi chợ.',
+  applicationName: 'Sổ công thức',
+  appleWebApp: {
+    // iOS ignores the manifest's display mode; this is what makes an installed
+    // icon open without browser chrome.
+    capable: true,
+    title: 'Sổ công thức',
+    statusBarStyle: 'default',
+  },
+  // Amounts and timings in a recipe should not become phone numbers or dates.
   formatDetection: { telephone: false, date: false, address: false, email: false },
 }
 
 export const viewport: Viewport = {
+  // Lets the layout paint under the notch; the pages already pad for it.
   viewportFit: 'cover',
   themeColor: '#fbf1f0',
 }
@@ -46,7 +57,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       lang="vi"
       className={`${baloo.variable} ${lexend.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   )
 }
