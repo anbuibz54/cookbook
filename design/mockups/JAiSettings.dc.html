@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Lexend:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF1F0; }
+    a { color: #C2415F; } a:hover { color: #9E3049; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 1000px; background: #FBF1F0; color: #241A1C; font-family: Lexend, system-ui, sans-serif; font-size: 15px; line-height: 1.45; padding: 24px 18px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px;">
+  <h1 style="margin: 0; font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 30px; line-height: 1;">AI trong app</h1>
+  <p style="margin: 0; color: #756468; text-wrap: pretty;">Dùng khi ghi bữa: đọc ảnh và tên món, đối chiếu tủ lạnh. Món có sẵn trong sổ thì app tự tính, không gọi AI.</p>
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="background: #FFFFFF; border: 2px solid #241A1C; border-radius: 18px; box-shadow: 3px 3px 0 #241A1C; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; flex-direction: column;"><span style="font-weight: 600;">Claude</span><span style="font-size: 12px; color: #756468;">claude-haiku-4-5 · đang dùng</span></div>
+        <span style="font-size: 12px; background: #E5F1ED; color: #2F7A64; padding: 3px 10px; border-radius: 999px;">Đã kết nối</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; color: #756468;">API key</span><div style="height: 44px; border-radius: 12px; border: 1px solid #E9D9D8; background: #FBF1F0; display: flex; align-items: center; padding: 0 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px;">sk-ant-…a41f</div></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; color: #756468;">Model</span><div style="height: 44px; border-radius: 12px; border: 1px solid #E9D9D8; display: flex; align-items: center; padding: 0 12px; font-size: 14px;">claude-haiku-4-5</div></div>
+    </div>
+
+    <div style="background: #FFFFFF; border: 1px solid #E9D9D8; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; flex-direction: column;"><span style="font-weight: 600;">Azure OpenAI</span><span style="font-size: 12px; color: #756468;">dự phòng</span></div>
+        <span style="font-size: 13px; color: #C2415F;">Dùng cái này</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; color: #756468;">Resource / endpoint</span><div style="height: 44px; border-radius: 12px; border: 1px solid #E9D9D8; display: flex; align-items: center; padding: 0 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px;">my-resource</div></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; color: #756468;">Deployment</span><div style="height: 44px; border-radius: 12px; border: 1px solid #E9D9D8; display: flex; align-items: center; padding: 0 12px; font-size: 14px;">gpt-4.1-mini</div></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; color: #756468;">API key</span><div style="height: 44px; border-radius: 12px; border: 1px solid #E9D9D8; display: flex; align-items: center; padding: 0 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px;">…9c20</div></div>
+      </div>
+    </div>
+
+    <div style="border: 2px dashed #C9B8B9; border-radius: 18px; padding: 14px; text-align: center; color: #756468; font-size: 14px;">+ Thêm nhà cung cấp</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+    <div style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 2px solid #241A1C; display: flex; align-items: center; justify-content: center; font-weight: 500;">Thử kết nối</div>
+    <div style="height: 48px; border-radius: 999px; background: #241A1C; color: #FBF1F0; display: flex; align-items: center; justify-content: center; font-weight: 500;">Lưu</div>
+  </div>
+
+  <p style="margin: 0; font-size: 12px; color: #756468; text-wrap: pretty;">Key được mã hóa trước khi lưu, chỉ hiện 4 ký tự cuối, không bao giờ gửi xuống trình duyệt. Mỗi lần ghi bữa với Haiku tốn khoảng vài trăm đồng.</p>
+</div>
+</x-dc>
+</body>
+</html>

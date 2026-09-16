@@ -1,11 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { requireUser } from '@/lib/auth/dal'
 import { db } from '@/server/db'
-import { deductFromPantry, pantryUsedBy, removePantryItems, suggestFromPantry } from '@/server/pantry/service'
+import { removePantryItems, suggestFromPantry } from '@/server/pantry/service'
 import {
   addShoppingItems,
   clearBought,
@@ -76,26 +75,3 @@ export async function clearBoughtAction() {
   revalidatePath('/shopping')
 }
 
-/**
- * After cooking: take out only what the user ticked.
- *
- * The form carries the pantry item ids; the amounts come from the recipe, not
- * from the form, so a tampered field cannot make the pantry lie.
- */
-export async function deductAfterCookingAction(recipeId: string, formData: FormData) {
-  const { user } = await requireUser()
-  const parsed = id.safeParse(recipeId)
-  if (!parsed.success) redirect('/')
-
-  const ticked = new Set(formData.getAll('item').map(String))
-  const used = (await pantryUsedBy(db, user.id, parsed.data)).filter((u) => ticked.has(u.item.id))
-
-  await deductFromPantry(
-    db,
-    user.id,
-    used.map((u) => ({ itemId: u.item.id, grams: u.needGrams })),
-  )
-
-  revalidatePath('/pantry')
-  redirect(`/recipes/${parsed.data}`)
-}

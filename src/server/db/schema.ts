@@ -379,3 +379,80 @@ export const mcpTokens = cookbook.table('mcp_tokens', {
   uniqueIndex('mcp_tokens_hash_idx').on(t.tokenHash),
   index('mcp_tokens_user_idx').on(t.userId, t.createdAt),
 ])
+
+/* -------------------------------------------------------------------------- */
+/* Journal — what was actually cooked                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One meal the user cooked: a photo, what it was, a note. The daily log that
+ * streaks and goals are counted from, and the place the pantry learns what was
+ * used.
+ *
+ * `cookedOn` is a date in Vietnam's calendar, not a timestamp — "hôm qua nấu gì"
+ * is a question about days, and logging dinner at 00:30 still belongs to the
+ * evening before if the user says so.
+ *
+ * `photoPath` is a key in the private `cookbook-photos` Storage bucket
+ * (`<userId>/journal/<file>`). Files are never overwritten — a new photo is a
+ * new path — so the image route can cache them forever.
+ */
+export const journalEntries = cookbook.table('journal_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  cookedOn: date('cooked_on').notNull(),
+  /** What the user called the meal, "canh chua cá lóc, cơm trắng". */
+  title: text('title').notNull(),
+  note: text('note'),
+  photoPath: text('photo_path'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('journal_user_day_idx').on(t.userId, t.cookedOn, t.createdAt),
+])
+
+/**
+ * The dishes in one meal. `recipeId` set = cooked from the sổ; null = a dish
+ * without a recipe ("cơm trắng"). Kept per dish rather than as one text field
+ * because "món mới" (first time a dish is cooked) is counted from here.
+ */
+export const journalDishes = cookbook.table('journal_dishes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entryId: uuid('entry_id').notNull().references(() => journalEntries.id, { onDelete: 'cascade' }),
+  position: smallint('position').notNull(),
+  recipeId: uuid('recipe_id').references(() => recipes.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  /** Normalised `name`, for "have I cooked this before" without a recipe. */
+  matchKey: text('match_key').notNull(),
+}, (t) => [
+  index('journal_dishes_entry_idx').on(t.entryId, t.position),
+  index('journal_dishes_recipe_idx').on(t.recipeId),
+])
+
+/**
+ *  - used    taken from the pantry
+ *  - bought  bought for this meal (not tracked in the pantry)
+ */
+export const journalItemKindEnum = cookbook.enum('journal_item_kind', ['used', 'bought'])
+
+/**
+ * What went into a meal, as the user confirmed it. A record, not a live link:
+ * the pantry row it came from may be gone by tomorrow, so the name and amount
+ * are copied here.
+ */
+export const journalItems = cookbook.table('journal_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entryId: uuid('entry_id').notNull().references(() => journalEntries.id, { onDelete: 'cascade' }),
+  kind: journalItemKindEnum('kind').notNull(),
+  position: smallint('position').notNull(),
+  name: text('name').notNull(),
+  matchKey: text('match_key').notNull(),
+  quantity: real('quantity'),
+  unit: text('unit'),
+  /** True when the user said the whole pantry item went ("hết"). */
+  usedAll: boolean('used_all').notNull().default(false),
+  foodId: uuid('food_id').references(() => foods.id, { onDelete: 'set null' }),
+}, (t) => [
+  index('journal_items_entry_idx').on(t.entryId, t.kind, t.position),
+  index('journal_items_food_id_idx').on(t.foodId),
+])

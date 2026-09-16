@@ -1,28 +1,213 @@
 {
   "pages": [
-    { "id": "page-3", "name": "Bảng màu" },
-    { "id": "page-1", "name": "Thiết kế chọn" },
-    { "id": "page-2", "name": "Ba hướng ban đầu" }
+    {
+      "name": "Nhật ký & động lực",
+      "id": "page-4"
+    },
+    {
+      "id": "page-3",
+      "name": "Bảng màu"
+    },
+    {
+      "id": "page-1",
+      "name": "Thiết kế chọn"
+    },
+    {
+      "id": "page-2",
+      "name": "Ba hướng ban đầu"
+    }
   ],
   "artboards": [
-    { "file": "PaletteHong.dc.html", "title": "Hồng sữa", "page": "page-3", "x": 0, "y": 0, "w": 440, "h": 900 },
-    { "file": "PaletteLa.dc.html", "title": "Lá non", "page": "page-3", "x": 540, "y": 0, "w": 440, "h": 900 },
-    { "file": "PaletteHongLa.dc.html", "title": "Hồng lá", "page": "page-3", "x": 1080, "y": 0, "w": 440, "h": 900 },
-    { "file": "PaletteKem.dc.html", "title": "Kem cam (hiện tại)", "page": "page-3", "x": 1620, "y": 0, "w": 440, "h": 900 },
-
-    { "file": "Home.dc.html", "title": "Trang chủ", "page": "page-1", "x": 0, "y": 0, "w": 390, "h": 1260 },
-    { "file": "Main.dc.html", "title": "Công thức", "page": "page-1", "x": 470, "y": 0, "w": 390, "h": 2150 },
-    { "file": "CookMode.dc.html", "title": "Chế độ nấu", "page": "page-1", "x": 940, "y": 0, "w": 390, "h": 844 },
-    { "file": "Library.dc.html", "title": "Sổ công thức", "page": "page-1", "x": 1410, "y": 0, "w": 390, "h": 1020 },
-
-    { "file": "SotayLibrary.dc.html", "title": "Sổ tay · Thư viện", "page": "page-2", "x": 0, "y": 0, "w": 390, "h": 1180 },
-    { "file": "SotayRecipe.dc.html", "title": "Sổ tay · Công thức", "page": "page-2", "x": 470, "y": 0, "w": 390, "h": 2400 },
-    { "file": "BepsoLibrary.dc.html", "title": "Bếp số · Thư viện", "page": "page-2", "x": 1060, "y": 0, "w": 390, "h": 900 },
-    { "file": "BepsoRecipe.dc.html", "title": "Bếp số · Công thức", "page": "page-2", "x": 1530, "y": 0, "w": 390, "h": 2000 },
-    { "file": "HopTheLibrary.dc.html", "title": "Hộp thẻ · Thư viện", "page": "page-2", "x": 2120, "y": 0, "w": 390, "h": 1080 },
-    { "file": "HopTheRecipe.dc.html", "title": "Hộp thẻ · Công thức", "page": "page-2", "x": 2590, "y": 0, "w": 390, "h": 2750 }
+    {
+      "title": "Hôm nay (trang chủ mới)",
+      "h": 1180,
+      "w": 390,
+      "file": "JToday.dc.html",
+      "y": 0,
+      "page": "page-4",
+      "x": 0
+    },
+    {
+      "title": "Ghi bữa",
+      "h": 1560,
+      "w": 390,
+      "file": "JLog.dc.html",
+      "y": 0,
+      "page": "page-4",
+      "x": 470
+    },
+    {
+      "title": "Thành tích",
+      "h": 1720,
+      "w": 390,
+      "file": "JGoals.dc.html",
+      "y": 0,
+      "page": "page-4",
+      "x": 940
+    },
+    {
+      "title": "Tạo streak",
+      "h": 900,
+      "w": 390,
+      "file": "JStreakNew.dc.html",
+      "y": 0,
+      "page": "page-4",
+      "x": 1410
+    },
+    {
+      "title": "Cấu hình AI",
+      "h": 1000,
+      "w": 390,
+      "file": "JAiSettings.dc.html",
+      "y": 0,
+      "page": "page-4",
+      "x": 1880
+    },
+    {
+      "title": "Thẻ chia sẻ (xuất ảnh)",
+      "h": 540,
+      "w": 432,
+      "file": "JShareCard.dc.html",
+      "y": 1040,
+      "page": "page-4",
+      "x": 1410
+    },
+    {
+      "file": "PaletteHong.dc.html",
+      "title": "Hồng sữa",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 440,
+      "h": 900
+    },
+    {
+      "file": "PaletteLa.dc.html",
+      "title": "Lá non",
+      "page": "page-3",
+      "x": 540,
+      "y": 0,
+      "w": 440,
+      "h": 900
+    },
+    {
+      "file": "PaletteHongLa.dc.html",
+      "title": "Hồng lá",
+      "page": "page-3",
+      "x": 1080,
+      "y": 0,
+      "w": 440,
+      "h": 900
+    },
+    {
+      "file": "PaletteKem.dc.html",
+      "title": "Kem cam (hiện tại)",
+      "page": "page-3",
+      "x": 1620,
+      "y": 0,
+      "w": 440,
+      "h": 900
+    },
+    {
+      "file": "Home.dc.html",
+      "title": "Trang chủ",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 1260
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Công thức",
+      "page": "page-1",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 2150
+    },
+    {
+      "file": "CookMode.dc.html",
+      "title": "Chế độ nấu",
+      "page": "page-1",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Library.dc.html",
+      "title": "Sổ công thức",
+      "page": "page-1",
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 1020
+    },
+    {
+      "file": "SotayLibrary.dc.html",
+      "title": "Sổ tay · Thư viện",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 1180
+    },
+    {
+      "file": "SotayRecipe.dc.html",
+      "title": "Sổ tay · Công thức",
+      "page": "page-2",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 2400
+    },
+    {
+      "file": "BepsoLibrary.dc.html",
+      "title": "Bếp số · Thư viện",
+      "page": "page-2",
+      "x": 1060,
+      "y": 0,
+      "w": 390,
+      "h": 900
+    },
+    {
+      "file": "BepsoRecipe.dc.html",
+      "title": "Bếp số · Công thức",
+      "page": "page-2",
+      "x": 1530,
+      "y": 0,
+      "w": 390,
+      "h": 2000
+    },
+    {
+      "file": "HopTheLibrary.dc.html",
+      "title": "Hộp thẻ · Thư viện",
+      "page": "page-2",
+      "x": 2120,
+      "y": 0,
+      "w": 390,
+      "h": 1080
+    },
+    {
+      "file": "HopTheRecipe.dc.html",
+      "title": "Hộp thẻ · Công thức",
+      "page": "page-2",
+      "x": 2590,
+      "y": 0,
+      "w": 390,
+      "h": 2750
+    }
   ],
   "annotations": [
+    {
+      "text": "Nhật ký & động lực — bản phác để duyệt trước khi code.\nHôm nay thay trang chủ: streak của hôm nay ở trên, nút lớn Ghi bữa, bên dưới là nhật ký có ảnh.\nGhi bữa: chụp ảnh, gõ món. Món có trong sổ thì app tự đối chiếu tủ lạnh; món ngoài sổ hoặc chỉ có ảnh thì gọi AI. Bạn chỉ tick và sửa số lượng, bấm lưu là tủ lạnh cập nhật và streak được tính.\nThành tích là tab thứ năm: streak (mỗi streak một kiểu và một giờ nhắc riêng), mục tiêu dài hạn, bảng món muốn chinh phục, bức tường ảnh, và nút xuất thẻ tháng để chia sẻ.",
+      "id": "nhat-ky",
+      "w": 1300,
+      "y": -330,
+      "page": "page-4",
+      "x": 0
+    },
     {
       "id": "mau",
       "page": "page-3",
@@ -56,5 +241,8 @@
       "text": "Ba hướng phác ban đầu, giữ lại để đối chiếu. Bạn đã chọn giữ chất Bếp số cho công thức và chất Hộp thẻ cho trang chủ."
     }
   ],
-  "launch": { "view": "canvas", "page": "page-1" }
+  "launch": {
+    "view": "canvas",
+    "page": "page-4"
+  }
 }

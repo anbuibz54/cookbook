@@ -19,11 +19,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { db } from '../src/server/db/index.ts'
-import { foods, mcpTokens, pantryItems, recipes, shoppingItems, stores } from '../src/server/db/schema.ts'
+import { foods, journalEntries, mcpTokens, pantryItems, recipes, shoppingItems, stores } from '../src/server/db/schema.ts'
 import { provisionUser } from '../src/server/auth/provision.ts'
 import { searchFoods } from '../src/server/foods/service.ts'
 import { createRecipe, type CreateRecipeInput } from '../src/server/recipes/service.ts'
 import { savePantryItems } from '../src/server/pantry/service.ts'
+import { createMeal } from '../src/server/journal/service.ts'
+import { removePhotos } from '../src/server/storage/photos.ts'
+import { vnDate } from '../src/lib/dates.ts'
 import { addShoppingItems, assignStore, listShopping, saveStore } from '../src/server/shopping/service.ts'
 
 const email = process.env.TEST_ACCOUNT_EMAIL
@@ -67,6 +70,11 @@ const user = await provisionUser(db, { id: authId, email })
 /* Wipe this account's cookbook data                                           */
 /* -------------------------------------------------------------------------- */
 
+const oldMeals = await db
+  .delete(journalEntries)
+  .where(eq(journalEntries.userId, user.id))
+  .returning({ photoPath: journalEntries.photoPath })
+await removePhotos(user.id, oldMeals.map((m) => m.photoPath).filter((p): p is string => Boolean(p)))
 await db.delete(shoppingItems).where(eq(shoppingItems.userId, user.id))
 await db.delete(stores).where(eq(stores.userId, user.id))
 await db.delete(pantryItems).where(eq(pantryItems.userId, user.id))
@@ -191,8 +199,9 @@ const recipesToSeed: CreateRecipeInput[] = [
   },
 ]
 
+const seededIds: Record<string, string> = {}
 for (const recipe of recipesToSeed) {
-  await createRecipe(db, user.id, recipe, 'web')
+  seededIds[recipe.title] = (await createRecipe(db, user.id, recipe, 'web')).recipeId
 }
 console.log(`recipes: ${recipesToSeed.length}`)
 
@@ -233,6 +242,36 @@ const cho = await saveStore(db, user.id, {
 await assignStore(db, user.id, [...byName('đường cát trắng'), ...byName('sốt mayonnaise')], bhx.id)
 await assignStore(db, user.id, [...byName('gừng'), ...byName('sả')], cho.id)
 console.log('shopping: 5 (4 sorted, 1 unsorted)')
+
+// Past meals without pantry use, so the pantry and shopping list above stay as seeded.
+await createMeal(
+  db,
+  user.id,
+  {
+    cookedOn: vnDate(-2),
+    dishes: [{ recipeId: seededIds['Trứng chiên hành lá'], name: 'Trứng chiên hành lá' }],
+    note: 'Tối bận, 10 phút xong.',
+    used: [],
+    bought: [],
+  },
+  null,
+)
+await createMeal(
+  db,
+  user.id,
+  {
+    cookedOn: vnDate(-1),
+    dishes: [
+      { recipeId: seededIds['Gà kho gừng'], name: 'Gà kho gừng' },
+      { recipeId: null, name: 'rau muống luộc' },
+    ],
+    note: 'Vợ khen nước kho vừa, lần sau thêm tiêu.',
+    used: [],
+    bought: [{ name: 'rau muống', amount: '1 bó' }],
+  },
+  null,
+)
+console.log('journal: 2 meals')
 
 console.log(`\nSign in at /login as ${email} (password in .env.local).`)
 process.exit(0)

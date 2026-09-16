@@ -144,8 +144,37 @@ shop needs web search and local knowledge, so it is Claude's, through
   groups the same way weekly; branch name, address and Maps URL come from Claude.
 - **shopping_items** — same-name lines merge (amounts add when the unit matches,
   otherwise the second amount lands in the note). `bought_at` is a soft tick.
-- After cooking, `/recipes/[id]/done` asks before deducting: weighed lines lose
-  grams and keep the remainder, unweighed lines are removed. Never silent.
+- After cooking, the pantry is updated by logging the meal (see Journal).
+  `/recipes/[id]/done` only redirects to `/log?recipe=<id>` now.
+
+## Journal (phase 1 of "nhật ký & động lực", built 2026-09-16)
+
+The daily log, and the moment the pantry learns what was used. Mockups: page
+"Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
+2 streaks, goals, wish board, photo wall, "Thành tích" tab → 3 in-app AI
+(multi-provider, keys encrypted per user) → 4 web push reminders per streak
+(Supabase `pg_cron` + `pg_net`, enabled by the user) → 5 monthly share card.
+
+- **journal_entries** (`cooked_on` is a Vietnam-calendar date, see
+  `src/lib/dates.ts`), **journal_dishes** (`recipe_id` null = no recipe;
+  kept per dish so "món mới" can be counted), **journal_items** (`used` from
+  the pantry / `bought`; copies of name and amount, not live links).
+- `/log`: pick dishes → `proposeMeal` (recipe × pantry, same matching and
+  expiry rules as suggestions, **no AI**) → cook ticks and edits → `createMeal`
+  does entry + pantry + shopping ticks in ONE transaction.
+- The amount box is free text (`src/lib/amount.ts`, `pnpm check:amount`):
+  "400 g", "2 quả", "nửa bó", "hết". Subtraction happens in grams when both
+  sides weigh, else in the pantry unit when it matches, else not at all and the
+  saved banner names the item. Blank = record only. "Vừa ăn" lines start
+  unticked: ticking "nước mắm" must never empty the bottle.
+- Bought items tick open shopping lines one way only ("hành lá tươi" ticks
+  "hành lá"; "hành" does not tick "hành tây").
+- Deleting a meal does not refill the pantry, and the confirm says so.
+- **Photos**: private bucket `cookbook-photos` (`pnpm storage:ensure`), path
+  `<userId>/journal/<uuid>.jpg`, shrunk on the phone to 1600 px JPEG
+  (`src/lib/photo.ts`) before a Server Action upload (body limit 5 MB in
+  `next.config.ts`). Served by `/api/photos/[...path]`, which checks the path
+  is the caller's and caches forever — paths are never reused.
 
 ## MCP (`src/server/mcp/server.ts`)
 
@@ -179,6 +208,8 @@ Connect Claude Code:
   reference import); deletes its `[smoke]` rows afterwards.
 - `pnpm foods:import` — reference data, see above.
 - `pnpm check:match`, `pnpm check:cook` — the two name matchers; no database.
+- `pnpm check:amount` — the meal-log amount parser; no database.
+- `pnpm storage:ensure` — creates/refreshes the private photo bucket.
 - `pnpm seed:test` — (re)creates `cookbook.test@example.com` with sample data,
   password in `.env.local`. Wipes only that account. Resetting the password
   signs out any open session of it. Use it to check screens in a real browser;
@@ -206,11 +237,12 @@ ink `#241A1C`, muted `#756468`, line `#E9D9D8`, primary/fat `#D9607E`, protein
 the energy bar is only readable by colour. Light mode only; cook mode gets its
 own dark screen rather than an inverted theme.
 
-Screens built: `/` home, `/recipes` list, `/recipes/[id]` detail (servings
+Screens built: `/` "Hôm nay" (log CTA + journal feed; settings via the gear),
+`/log`, `/journal/[id]`, `/recipes` list, `/recipes/[id]` detail (servings
 stepper scales quantities client-side; per-serving nutrition stays fixed),
-`/recipes/[id]/cook` cook mode, `/recipes/[id]/done` (deduct from the pantry),
+`/recipes/[id]/cook` cook mode (last step → `/log?recipe=`),
 `/pantry`, `/shopping`, `/recipes/new` (explains that recipes arrive via
-Claude), `/settings` (reached from the home card, not the tab bar).
+Claude), `/settings` (reached from the gear on Hôm nay, not the tab bar).
 
 ### Navigation
 
@@ -261,8 +293,10 @@ verdict is that only the timer alarm is missed, which an Expo shell around this
 web UI could add without a rewrite.
 
 ## Deferred — do not build yet
-- In-app AI (Claude API): paste text/photo → structured recipe, suggestions.
-  Wanted, not yet scoped.
+- In-app AI: phase 3 of the journal plan. Default Azure OpenAI deployment
+  `gpt-5.4-nano` (dev creds in `.env.local` as `AZURE_OPENAI_*`), Claude
+  default model `claude-sonnet-5` once the user has an API key (a Claude
+  subscription OAuth token cannot be used by this app).
 - Video analysis (in-app). Deferred by the user.
 - Reviewing machine-translated food names in the app (flip `name_vi_reviewed`).
 - Using `wastePct` for as-bought quantities ("1 kg cá" includes bones).

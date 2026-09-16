@@ -318,7 +318,7 @@ export function CookMode({
         </button>
         {last ? (
           <Link
-            href={`/recipes/${recipeId}/done`} transitionTypes={['nav-forward']}
+            href={`/log?recipe=${recipeId}`} transitionTypes={['nav-forward']}
             className="flex h-15 items-center justify-center rounded-full bg-protein font-display text-xl font-extrabold text-cook-bg"
           >
             Xong, ăn thôi

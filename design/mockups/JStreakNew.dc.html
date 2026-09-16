@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Lexend:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF1F0; }
+    a { color: #C2415F; } a:hover { color: #9E3049; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 900px; background: #FBF1F0; color: #241A1C; font-family: Lexend, system-ui, sans-serif; font-size: 15px; line-height: 1.45; padding: 12px 18px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px;">
+  <div style="height: 52px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="color: #756468;">Hủy</span>
+    <span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px;">Streak mới</span>
+    <span style="width: 32px;"></span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 13px; font-weight: 500;">Tên</span>
+    <div style="height: 50px; border-radius: 14px; background: #FFFFFF; border: 2px solid #241A1C; display: flex; align-items: center; padding: 0 14px; font-size: 16px;">Nấu cơm cho vợ</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 13px; font-weight: 500;">Kiểu</span>
+    <div style="background: #FFFFFF; border: 1px solid #E9D9D8; border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start;">
+      <span style="width: 20px; height: 20px; border-radius: 10px; border: 2px solid #C9B8B9; margin-top: 2px;"></span>
+      <div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Mỗi ngày, liên tục</span><span style="font-size: 12px; color: #756468;">Bỏ một ngày là chuỗi về 0.</span></div>
+    </div>
+    <div style="background: #FFFFFF; border: 2px solid #241A1C; border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start;">
+      <span style="width: 20px; height: 20px; border-radius: 10px; border: 6px solid #D9607E; box-sizing: border-box; margin-top: 2px;"></span>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Mỗi ngày, có ngày nghỉ</span><span style="font-size: 12px; color: #756468;">Ốm, đi ăn ngoài vẫn giữ được chuỗi.</span></div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+          Nghỉ được
+          <span style="display: flex; align-items: center; border: 1px solid #E9D9D8; border-radius: 10px;"><span style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">−</span><span style="font-family: 'JetBrains Mono', ui-monospace, monospace; min-width: 20px; text-align: center;">1</span><span style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">+</span></span>
+          ngày / tuần
+        </div>
+      </div>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #E9D9D8; border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start;">
+      <span style="width: 20px; height: 20px; border-radius: 10px; border: 2px solid #C9B8B9; margin-top: 2px;"></span>
+      <div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Vài lần mỗi tuần</span><span style="font-size: 12px; color: #756468;">Ví dụ nấu món mới 1 lần/tuần. Tính theo tuần, không theo ngày.</span></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 13px; font-weight: 500;">Tính là đã làm khi</span>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="height: 38px; padding: 0 14px; border-radius: 999px; background: #241A1C; color: #FBF1F0; display: flex; align-items: center; font-size: 14px;">Mình tick khi ghi bữa</span>
+      <span style="height: 38px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9D9D8; display: flex; align-items: center; font-size: 14px;">Có ghi bữa bất kỳ</span>
+      <span style="height: 38px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9D9D8; display: flex; align-items: center; font-size: 14px;">Nấu món chưa từng nấu</span>
+    </div>
+  </div>
+
+  <div style="background: #FFFFFF; border: 1px solid #E9D9D8; border-radius: 16px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; flex-direction: column;"><span style="font-weight: 500;">Nhắc nếu chưa làm</span><span style="font-size: 12px; color: #756468;">Đã làm trong ngày thì không nhắc.</span></div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid #E9D9D8; display: flex; align-items: center; font-family: 'JetBrains Mono', ui-monospace, monospace;">17:00</span>
+      <span style="width: 48px; height: 28px; border-radius: 14px; background: #4E9E86; position: relative;"><span style="position: absolute; right: 3px; top: 3px; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF;"></span></span>
+    </div>
+  </div>
+
+  <div style="height: 56px; border-radius: 999px; background: #241A1C; color: #FBF1F0; box-shadow: 4px 4px 0 #D9607E; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px;">Tạo streak</div>
+</div>
+</x-dc>
+</body>
+</html>

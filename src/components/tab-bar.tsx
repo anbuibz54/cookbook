@@ -16,7 +16,7 @@ import { usePathname } from 'next/navigation'
 const TABS = [
   {
     href: '/',
-    label: 'Trang chủ',
+    label: 'Hôm nay',
     icon: <path d="M4 11l8-6 8 6v8H4z" />,
   },
   {
