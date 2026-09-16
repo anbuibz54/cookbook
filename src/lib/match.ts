@@ -12,12 +12,16 @@ import { normalizeForSearch } from './text'
  * genuinely different things ("trứng gà" vs "trứng vịt") must never collapse,
  * so nothing is dropped from the middle of a name and nothing is stemmed.
  */
-const NOISE = new Set([
-  // prep, written into ingredient names all the time
-  'bam', 'nhuyen', 'thai', 'lat', 'soi', 'nho', 'khuc', 'mieng', 'vua', 'an',
-  // grades and origin, which do not change what to cook or what to buy
-  'ta', 'cong', 'nghiep', 'loai', 'tuoi', 'ngon', 'sach',
-])
+/*
+ * Only words that can never be part of WHAT the ingredient is. Diacritics are
+ * gone by the time this runs, which is where the traps are: "lát" (a slice)
+ * and "lạt" (unsalted) are both "lat", so dropping it turned "bơ lạt" into
+ * "bơ" and matched "bơ mặn"; "tươi" turned "sữa tươi" into "sữa" and matched
+ * "sữa đặc"; "ăn" turned "dầu ăn" into "dầu" and matched "dầu hào"; "nhỏ" is
+ * "nho", a grape. None of those words may be in this list. `pnpm check:match`
+ * holds each of those pairs apart.
+ */
+const NOISE = new Set(['bam', 'nhuyen', 'thai', 'soi', 'khuc', 'mieng'])
 
 export function matchKey(name: string): string {
   const words = normalizeForSearch(name)
@@ -32,15 +36,18 @@ export function matchKey(name: string): string {
   return words.join(' ')
 }
 
-/** Does the pantry line `have` cover the recipe's `need`? Names only, no amounts. */
+/**
+ * Does the pantry line `have` cover the recipe's `need`? Names only, no amounts.
+ *
+ * Only a PREFIX relation counts: "thịt ba chỉ" covers "thịt ba chỉ heo" and the
+ * other way round, because Vietnamese puts the qualifier after the noun.
+ *
+ * A suffix match used to count too, and it was wrong in exactly the way that
+ * matters: "sữa tươi không đường" ends in "đường", so milk in the fridge made
+ * every recipe needing sugar look covered. The head noun comes first; a shared
+ * last word says nothing.
+ */
 export function covers(have: string, need: string): boolean {
   if (have === need) return true
-  // "thịt ba chỉ" in the fridge covers "thịt ba chỉ heo" in a recipe, and the
-  // other way round — one is the other plus a qualifier.
-  return (
-    have.startsWith(`${need} `) ||
-    need.startsWith(`${have} `) ||
-    have.endsWith(` ${need}`) ||
-    need.endsWith(` ${have}`)
-  )
+  return have.startsWith(`${need} `) || need.startsWith(`${have} `)
 }

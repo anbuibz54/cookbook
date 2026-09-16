@@ -125,10 +125,17 @@ shop needs web search and local knowledge, so it is Claude's, through
 - **pantry_items** — one row per thing (unique on `match_key`). Amounts and
   `expires_on` are optional: "còn hành lá" is a valid entry and still answers
   "nấu được món này không".
-- **Matching** (`src/lib/match.ts`): `matchKey` strips diacritics, case and
-  *trailing* prep/grade words ("thịt ba chỉ thái lát" → "thit ba chi"); `covers`
-  allows one name to be the other plus a qualifier. Shallow on purpose — "trứng
-  gà" and "trứng vịt" must never collapse.
+- **Matching** (`src/lib/match.ts`): `matchKey` strips diacritics, case and a
+  few *trailing* prep words ("thịt ba chỉ thái lát" → "thit ba chi"); `covers`
+  only accepts a PREFIX relation (qualifiers come after the noun). **A false
+  match is the dangerous failure** — it tells you that you have something you
+  do not. Two that shipped and were fixed: a suffix rule made "sữa tươi không
+  đường" cover "đường"; noise words that collide once diacritics are gone
+  ("lạt"/"lát", "tươi", "ăn", "nhỏ"/"nho") turned "bơ lạt" into "bơ".
+  `pnpm check:match` holds these pairs apart; add a case before changing either
+  function, and run `pnpm rekey:match` afterwards — the key is stored.
+- Expired pantry items (`expires_on` before today, in Vietnam's calendar) do not
+  count as available.
 - Suggestions ignore optional lines and lines with no amount ("muối, vừa ăn"):
   nobody shops for those, and counting them makes every recipe look short.
   Ranking: fewest missing → uses something expiring within 3 days → most
@@ -171,6 +178,11 @@ Connect Claude Code:
   search, update history, and USDA portion/density conversion (needs the
   reference import); deletes its `[smoke]` rows afterwards.
 - `pnpm foods:import` — reference data, see above.
+- `pnpm check:match`, `pnpm check:cook` — the two name matchers; no database.
+- `pnpm seed:test` — (re)creates `cookbook.test@example.com` with sample data,
+  password in `.env.local`. Wipes only that account. Resetting the password
+  signs out any open session of it. Use it to check screens in a real browser;
+  checking by eye found five bugs the smoke test could not.
 - The dev machine is short on memory: stop `pnpm dev` when done, and don't run
   it alongside a big import.
 
