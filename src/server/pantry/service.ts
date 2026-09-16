@@ -183,10 +183,21 @@ export async function suggestFromPantry(
 
   if (pantry.length === 0 || lines.length === 0) return []
 
-  const soon = new Date()
-  soon.setDate(soon.getDate() + EXPIRING_DAYS)
+  // Dates compared as YYYY-MM-DD strings in Vietnam's calendar, not the
+  // server's: a Vercel function runs in UTC, where "today" starts 7 hours late.
+  const day = (offset: number) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(
+      new Date(Date.now() + offset * 86_400_000),
+    )
+  const today = day(0)
+  const soon = day(EXPIRING_DAYS)
+
+  // Past its date is not "có". Suggesting a recipe because of expired milk —
+  // or praising it for using up milk that is already off — is the one way
+  // this screen could do harm. It still shows in the pantry list, marked.
+  const usable = pantry.filter((p) => p.expiresOn == null || p.expiresOn >= today)
   const expiringSoon = new Set(
-    pantry.filter((p) => p.expiresOn != null && new Date(p.expiresOn) <= soon).map((p) => p.matchKey),
+    usable.filter((p) => p.expiresOn != null && p.expiresOn <= soon).map((p) => p.matchKey),
   )
 
   const byRecipe = new Map<string, Suggestion>()
@@ -214,8 +225,8 @@ export async function suggestFromPantry(
 
     const key = matchKey(line.name)
     const inPantry =
-      pantry.find((p) => p.foodId != null && p.foodId === line.foodId) ??
-      pantry.find((p) => covers(p.matchKey, key))
+      usable.find((p) => p.foodId != null && p.foodId === line.foodId) ??
+      usable.find((p) => covers(p.matchKey, key))
 
     if (!inPantry) {
       entry.missing.push({

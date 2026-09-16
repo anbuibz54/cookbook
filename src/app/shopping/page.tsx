@@ -25,6 +25,16 @@ type Group = {
   lines: ShoppingLine[]
 }
 
+/**
+ * "Bách Hóa Xanh Nguyễn Thị Thập" already says Bách Hóa Xanh; "chợ Tân Mỹ"
+ * already says chợ. Prefix the kind only when the branch name does not.
+ */
+function storeTitle(kind: keyof typeof STORE_LABEL, name: string) {
+  const label = STORE_LABEL[kind]
+  const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
+  return plain(name).includes(plain(label)) ? name : `${label} · ${name}`
+}
+
 /** One group per shop, in shopping order: chain, market, supermarket, online, then unsorted. */
 function groupByStore(lines: ShoppingLine[]): Group[] {
   const groups = new Map<string, Group>()
@@ -33,7 +43,7 @@ function groupByStore(lines: ShoppingLine[]): Group[] {
     const key = line.store?.id ?? 'unsorted'
     const group = groups.get(key) ?? {
       key,
-      title: line.store ? `${STORE_LABEL[line.store.kind]} · ${line.store.name}` : 'Chưa phân loại',
+      title: line.store ? storeTitle(line.store.kind, line.store.name) : 'Chưa phân loại',
       kind: line.store?.kind ?? null,
       address: line.store?.address ?? null,
       mapsUrl: line.store?.mapsUrl ?? null,

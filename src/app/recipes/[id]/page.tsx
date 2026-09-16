@@ -53,8 +53,8 @@ export default async function RecipePage({ params }: PageProps<'/recipes/[id]'>)
 
         <div className="grid grid-cols-[100px_minmax(0,1fr)] items-center gap-3.5">
           <Thumb id={recipe.id} className="size-25 rounded-2xl border-2 border-ink" />
-          <div className="flex flex-col gap-1.5">
-            <h1 className="font-display text-[26px] leading-tight font-extrabold text-balance">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className="font-display text-[26px] leading-tight font-extrabold text-balance break-words">
               {recipe.title}
             </h1>
             {recipe.prepMinutes != null || recipe.cookMinutes != null ? (

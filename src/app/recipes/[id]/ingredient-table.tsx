@@ -107,15 +107,19 @@ export function IngredientTable({
                 row.optional ? 'text-muted' : ''
               }`}
             >
-              <span className="flex items-center gap-1.5">
-                {row.name}
-                {!row.optional && row.kcal == null ? (
-                  <span
-                    aria-label={row.linked ? 'chưa biết cân nặng' : 'chưa có số liệu dinh dưỡng'}
-                    className="size-[7px] shrink-0 rounded-full bg-carbs"
-                  />
-                ) : null}
-                {row.note ? <span className="truncate text-muted">, {row.note}</span> : null}
+              {/* The note goes on its own line: squeezed in after the name it
+                  truncated to "trứng gà, tách l…" and pushed the name onto two lines. */}
+              <span className="flex min-w-0 flex-col">
+                <span className="flex items-center gap-1.5">
+                  {row.name}
+                  {!row.optional && row.kcal == null ? (
+                    <span
+                      aria-label={row.linked ? 'chưa biết cân nặng' : 'chưa có số liệu dinh dưỡng'}
+                      className="size-[7px] shrink-0 rounded-full bg-carbs"
+                    />
+                  ) : null}
+                </span>
+                {row.note ? <span className="text-xs text-pretty text-muted">{row.note}</span> : null}
               </span>
               <span className="text-muted">
                 {row.quantity == null
