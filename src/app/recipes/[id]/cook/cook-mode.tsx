@@ -256,7 +256,7 @@ export function CookMode({
           Bước {index + 1} / {steps.length}
         </span>
         <Link
-          href={`/recipes/${recipeId}`}
+          href={`/recipes/${recipeId}`} transitionTypes={['nav-back']}
           aria-label="Thoát chế độ nấu"
           className="flex size-11 items-center justify-center rounded-full bg-cook-surface"
         >
@@ -318,7 +318,7 @@ export function CookMode({
         </button>
         {last ? (
           <Link
-            href={`/recipes/${recipeId}/done`}
+            href={`/recipes/${recipeId}/done`} transitionTypes={['nav-forward']}
             className="flex h-15 items-center justify-center rounded-full bg-protein font-display text-xl font-extrabold text-cook-bg"
           >
             Xong, ăn thôi

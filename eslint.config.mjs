@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Downloaded datasets and one-off local scripts, not app code.
+    ".data/**",
   ]),
 ]);
 

@@ -82,6 +82,92 @@ html {
   color-scheme: light;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Page transitions — see src/components/page-transition.tsx                    */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Old content leaves fast so it does not compete; new content arrives a beat
+ * later and a little slower. 60px of travel says "direction" without making
+ * anyone track a sliding page across a phone screen.
+ */
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation: 150ms ease-in both page-fade reverse, 380ms ease-in-out both page-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation: 210ms ease-out 120ms both page-fade, 380ms ease-in-out both page-slide;
+}
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation: 150ms ease-in both page-fade reverse, 380ms ease-in-out both page-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation: 210ms ease-out 120ms both page-fade, 380ms ease-in-out both page-slide;
+}
+
+/* Tabs are siblings, not a hierarchy: no direction, just a quick crossfade. */
+::view-transition-old(.tab-fade) {
+  animation: 120ms ease-in both page-fade reverse;
+}
+::view-transition-new(.tab-fade) {
+  animation: 180ms ease-out 80ms both page-fade;
+}
+
+@keyframes page-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes page-slide {
+  from { translate: var(--slide-offset); }
+  to { translate: 0; }
+}
+
+/* The tab bar is the fixed reference point: content moves, it does not. */
+::view-transition-group(tab-bar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+
+/* A tap during the 400ms animation must still land on the page. */
+::view-transition {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/*
+ * Shown on a tab only if its navigation is actually slow: invisible for the
+ * first 150ms, so a fast tap never flashes a spinner.
+ */
+.tab-pending {
+  opacity: 0;
+}
+.tab-pending[data-pending='true'] {
+  animation: 180ms ease 150ms forwards tab-pending-in, 1s ease-in-out 330ms infinite tab-pending-pulse;
+}
+@keyframes tab-pending-in {
+  to { opacity: 1; }
+}
+@keyframes tab-pending-pulse {
+  50% { opacity: 0.35; }
+}
+
 body {
   background: var(--background);
   color: var(--ink);

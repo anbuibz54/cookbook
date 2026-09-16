@@ -1,9 +1,9 @@
-import { TabBar } from '@/components/tab-bar'
 import {
   clearBoughtAction,
   removeShoppingItemAction,
   setBoughtAction,
 } from '@/app/_actions/kitchen'
+import { PageTransition } from '@/components/page-transition'
 import { requireUser } from '@/lib/auth/dal'
 import { formatQuantity } from '@/lib/units'
 import { db } from '@/server/db'
@@ -56,137 +56,136 @@ export default async function ShoppingPage() {
   const unsorted = open.filter((l) => l.store == null).length
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-[18px] pt-6 pb-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="font-display text-[30px] leading-none font-extrabold">Đi chợ</h1>
-        <span className="font-mono text-sm text-muted">
-          {open.length} món{bought.length > 0 ? ` · ${bought.length} đã mua` : ''}
-        </span>
-      </header>
+    <PageTransition>
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-[18px] pt-6 pb-32">
+        <header className="flex items-baseline justify-between">
+          <h1 className="font-display text-[30px] leading-none font-extrabold">Đi chợ</h1>
+          <span className="font-mono text-sm text-muted">
+            {open.length} món{bought.length > 0 ? ` · ${bought.length} đã mua` : ''}
+          </span>
+        </header>
 
-      {open.length === 0 && bought.length === 0 ? (
-        <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">
-          Danh sách trống. Vào Tủ lạnh bấm “thêm món thiếu vào đi chợ”, hoặc nói với Claude “thêm
-          trứng với sữa vào danh sách đi chợ”.
-        </p>
-      ) : null}
+        {open.length === 0 && bought.length === 0 ? (
+          <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">
+            Danh sách trống. Vào Tủ lạnh bấm “thêm món thiếu vào đi chợ”, hoặc nói với Claude “thêm
+            trứng với sữa vào danh sách đi chợ”.
+          </p>
+        ) : null}
 
-      {unsorted > 0 ? (
-        <p className="rounded-[18px] border-2 border-ink bg-warn-bg px-4 py-3 text-[13px] text-pretty text-warn-ink">
-          {unsorted} món chưa biết mua ở đâu. Nói với Claude “phân loại danh sách đi chợ, tui ở
-          [quận/khu vực]” — Claude tra xem món nào Bách Hóa Xanh có, món nào ra chợ, rồi gửi kèm địa
-          chỉ và link bản đồ.
-        </p>
-      ) : null}
+        {unsorted > 0 ? (
+          <p className="rounded-[18px] border-2 border-ink bg-warn-bg px-4 py-3 text-[13px] text-pretty text-warn-ink">
+            {unsorted} món chưa biết mua ở đâu. Nói với Claude “phân loại danh sách đi chợ, tui ở
+            [quận/khu vực]” — Claude tra xem món nào Bách Hóa Xanh có, món nào ra chợ, rồi gửi kèm địa
+            chỉ và link bản đồ.
+          </p>
+        ) : null}
 
-      {groups.map((group) => (
-        <section key={group.key} className="flex flex-col gap-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span
-              className={`rounded-full border-2 border-ink px-3 py-1 font-display text-[15px] font-extrabold ${
-                group.kind ? KIND_STYLE[group.kind] : 'bg-surface'
-              }`}
-            >
-              {group.title}
-            </span>
-            {group.mapsUrl ? (
-              <a
-                href={group.mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 text-[13px] text-primary underline underline-offset-4"
+        {groups.map((group) => (
+          <section key={group.key} className="flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span
+                className={`rounded-full border-2 border-ink px-3 py-1 font-display text-[15px] font-extrabold ${
+                  group.kind ? KIND_STYLE[group.kind] : 'bg-surface'
+                }`}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z" />
-                  <circle cx="12" cy="10" r="2.5" />
-                </svg>
-                Bản đồ
-              </a>
-            ) : null}
-          </div>
-          {group.address ? <p className="text-xs text-muted">{group.address}</p> : null}
+                {group.title}
+              </span>
+              {group.mapsUrl ? (
+                <a
+                  href={group.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-[13px] text-primary underline underline-offset-4"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                  </svg>
+                  Bản đồ
+                </a>
+              ) : null}
+            </div>
+            {group.address ? <p className="text-xs text-muted">{group.address}</p> : null}
 
-          <ul className="rounded-[18px] border border-line bg-surface px-3.5">
-            {group.lines.map((line, i) => (
-              <li
-                key={line.id}
-                className={`flex items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
-              >
-                <form action={setBoughtAction.bind(null, line.id, true)} className="flex">
-                  <button
-                    type="submit"
-                    aria-label={`Đánh dấu đã mua ${line.name}`}
-                    className="size-6 shrink-0 rounded-full border-2 border-ink"
-                  />
-                </form>
-                <div className="flex min-w-0 grow flex-col gap-0.5">
-                  <span className="truncate font-medium">{line.name}</span>
-                  {line.note || line.recipeTitle ? (
-                    <span className="truncate text-xs text-muted">
-                      {[line.note, line.recipeTitle ? `cho ${line.recipeTitle}` : null]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="shrink-0 font-mono text-[13px] text-muted tabular-nums">
-                  {line.quantity != null
-                    ? `${formatQuantity(line.quantity)}${line.unit ? ` ${line.unit}` : ''}`
-                    : ''}
-                </span>
-                <form action={removeShoppingItemAction.bind(null, line.id)} className="flex">
-                  <button
-                    type="submit"
-                    aria-label={`Bỏ ${line.name} khỏi danh sách`}
-                    className="flex size-9 items-center justify-center rounded-full text-muted hover:text-primary"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-                      <path d="M6 6l12 12M18 6L6 18" />
-                    </svg>
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+            <ul className="rounded-[18px] border border-line bg-surface px-3.5">
+              {group.lines.map((line, i) => (
+                <li
+                  key={line.id}
+                  className={`flex items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
+                >
+                  <form action={setBoughtAction.bind(null, line.id, true)} className="flex">
+                    <button
+                      type="submit"
+                      aria-label={`Đánh dấu đã mua ${line.name}`}
+                      className="size-6 shrink-0 rounded-full border-2 border-ink"
+                    />
+                  </form>
+                  <div className="flex min-w-0 grow flex-col gap-0.5">
+                    <span className="truncate font-medium">{line.name}</span>
+                    {line.note || line.recipeTitle ? (
+                      <span className="truncate text-xs text-muted">
+                        {[line.note, line.recipeTitle ? `cho ${line.recipeTitle}` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 font-mono text-[13px] text-muted tabular-nums">
+                    {line.quantity != null
+                      ? `${formatQuantity(line.quantity)}${line.unit ? ` ${line.unit}` : ''}`
+                      : ''}
+                  </span>
+                  <form action={removeShoppingItemAction.bind(null, line.id)} className="flex">
+                    <button
+                      type="submit"
+                      aria-label={`Bỏ ${line.name} khỏi danh sách`}
+                      className="flex size-9 items-center justify-center rounded-full text-muted hover:text-primary"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
 
-      {bought.length > 0 ? (
-        <section className="flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold text-muted">Đã mua</h2>
-            <form action={clearBoughtAction}>
-              <button type="submit" className="text-[13px] text-muted hover:text-primary">
-                Xóa hết
-              </button>
-            </form>
-          </div>
-          <ul className="rounded-[18px] border border-line px-3.5">
-            {bought.map((line, i) => (
-              <li
-                key={line.id}
-                className={`flex items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
-              >
-                <form action={setBoughtAction.bind(null, line.id, false)} className="flex">
-                  <button
-                    type="submit"
-                    aria-label={`Bỏ đánh dấu đã mua ${line.name}`}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-muted bg-muted"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--background)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M5 12l5 5 9-10" />
-                    </svg>
-                  </button>
-                </form>
-                <span className="truncate text-muted line-through">{line.name}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <div className="grow" />
-      <TabBar />
-    </div>
+        {bought.length > 0 ? (
+          <section className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl font-extrabold text-muted">Đã mua</h2>
+              <form action={clearBoughtAction}>
+                <button type="submit" className="text-[13px] text-muted hover:text-primary">
+                  Xóa hết
+                </button>
+              </form>
+            </div>
+            <ul className="rounded-[18px] border border-line px-3.5">
+              {bought.map((line, i) => (
+                <li
+                  key={line.id}
+                  className={`flex items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
+                >
+                  <form action={setBoughtAction.bind(null, line.id, false)} className="flex">
+                    <button
+                      type="submit"
+                      aria-label={`Bỏ đánh dấu đã mua ${line.name}`}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-muted bg-muted"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--background)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 12l5 5 9-10" />
+                      </svg>
+                    </button>
+                  </form>
+                  <span className="truncate text-muted line-through">{line.name}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+      </div>
+    </PageTransition>
   )
 }

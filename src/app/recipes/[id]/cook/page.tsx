@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { PageTransition } from '@/components/page-transition'
 import { requireUser } from '@/lib/auth/dal'
 import { mentionedIn } from '@/lib/cook'
 import { formatQuantity } from '@/lib/units'
@@ -33,5 +34,9 @@ export default async function CookPage({ params }: PageProps<'/recipes/[id]/cook
     ingredients: mentionedIn(step.body, ingredients).slice(0, 5),
   }))
 
-  return <CookMode recipeId={full.recipe.id} title={full.recipe.title} steps={steps} />
+  return (
+    <PageTransition>
+      <CookMode recipeId={full.recipe.id} title={full.recipe.title} steps={steps} />
+    </PageTransition>
+  )
 }
