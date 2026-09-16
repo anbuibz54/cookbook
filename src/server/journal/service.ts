@@ -23,6 +23,7 @@ import {
   shoppingItems,
 } from '../db/schema'
 import { foodsByIds } from '../foods/service'
+import { checkinForMeal, conquerWishes } from '../motivation/service'
 import { formatAmount, parseAmount } from '@/lib/amount'
 import { vnDate, weekStart } from '@/lib/dates'
 import { covers, matchKey } from '@/lib/match'
@@ -147,6 +148,8 @@ export const mealInput = z.object({
   note: z.string().trim().max(2000).nullish(),
   used: z.array(z.object({ pantryItemId: z.uuid(), amount: z.string().max(40) })).max(60),
   bought: z.array(z.object({ name: z.string().trim().min(1).max(80), amount: z.string().max(40) })).max(60),
+  /** `tick` streaks the user ticked for this meal. */
+  streakIds: z.array(z.uuid()).max(20).optional(),
 })
 
 export type MealInput = z.output<typeof mealInput>
@@ -162,15 +165,15 @@ export type PantryChange = {
 
 /**
  * Save a meal and apply it to the kitchen, in one transaction: the entry, its
- * dishes and items, the pantry deductions, and ticking matching lines on the
- * shopping list. Either all of it happens or none.
+ * dishes and items, the pantry deductions, ticking matching lines on the
+ * shopping list, ticked streaks, and wishes this meal conquers. Either all of it happens or none.
  */
 export async function createMeal(
   db: Db,
   userId: string,
   input: MealInput,
   photoPath: string | null,
-): Promise<{ entryId: string; pantry: PantryChange }> {
+): Promise<{ entryId: string; pantry: PantryChange; conquered: string[] }> {
   // Recipe ids from the form are only trusted after checking they are the user's.
   const recipeIds = [...new Set(input.dishes.map((d) => d.recipeId).filter((id): id is string => Boolean(id)))]
   const owned = recipeIds.length
@@ -200,6 +203,7 @@ export async function createMeal(
 
   const change: PantryChange = { reduced: [], removed: [], unchanged: [] }
 
+  let conquered: string[] = []
   const entryId = await db.transaction(async (tx) => {
     const [entry] = await tx
       .insert(journalEntries)
@@ -221,6 +225,12 @@ export async function createMeal(
         matchKey: matchKey(d.name),
       })),
     )
+
+    await checkinForMeal(tx, userId, entry.id, input.cookedOn, input.streakIds ?? [])
+    conquered = await conquerWishes(tx, userId, entry.id, input.dishes.map((d) => ({
+      recipeId: d.recipeId && owned.has(d.recipeId) ? d.recipeId : null,
+      name: d.name,
+    })))
 
     const itemRows: (typeof journalItems.$inferInsert)[] = []
 
@@ -317,7 +327,7 @@ export async function createMeal(
     return entry.id
   })
 
-  return { entryId, pantry: change }
+  return { entryId, pantry: change, conquered }
 }
 
 /* -------------------------------------------------------------------------- */

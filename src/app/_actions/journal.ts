@@ -57,6 +57,7 @@ export async function saveMealAction(formData: FormData): Promise<SaveMealState>
   }
 
   revalidatePath('/')
+  revalidatePath('/achievements')
   revalidatePath('/pantry')
   revalidatePath('/shopping')
 
@@ -66,6 +67,7 @@ export async function saveMealAction(formData: FormData): Promise<SaveMealState>
     ...(reduced.length ? { reduced: String(reduced.length) } : {}),
     ...(removed.length ? { removed: String(removed.length) } : {}),
     ...(unchanged.length ? { unchanged: unchanged.join(', ') } : {}),
+    ...(result.conquered.length ? { conquered: result.conquered.join(', ') } : {}),
   })
   redirect(`/journal/${result.entryId}?${query}`)
 }
@@ -79,5 +81,6 @@ export async function deleteMealAction(entryId: string) {
   if (deleted?.photoPath) await removePhotos(user.id, [deleted.photoPath]).catch(() => {})
 
   revalidatePath('/')
+  revalidatePath('/achievements')
   redirect('/')
 }

@@ -46,7 +46,7 @@ function assert(condition: unknown, message: string) {
 
 const tools = await client.listTools()
 console.log('tools:', tools.tools.map((t) => t.name).join(', '))
-assert(tools.tools.length === 13, 'thirteen tools are exposed')
+assert(tools.tools.length === 14, 'fourteen tools are exposed')
 
 // A food with round numbers, so the expected nutrition is easy to check by hand.
 const sugar = firstUuid(

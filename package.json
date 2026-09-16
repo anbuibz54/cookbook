@@ -19,7 +19,8 @@
     "rekey:match": "tsx --env-file=.env.local scripts/rekey-matching.mts",
     "seed:test": "tsx --env-file=.env.local scripts/seed-test-account.mts",
     "storage:ensure": "tsx --env-file=.env.local scripts/ensure-storage.mts",
-    "check:amount": "tsx scripts/check-amount.mts"
+    "check:amount": "tsx scripts/check-amount.mts",
+    "check:streaks": "tsx scripts/check-streaks.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

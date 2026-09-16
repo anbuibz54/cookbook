@@ -19,7 +19,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { db } from '../src/server/db/index.ts'
-import { foods, journalEntries, mcpTokens, pantryItems, recipes, shoppingItems, stores } from '../src/server/db/schema.ts'
+import {
+  foods,
+  goals,
+  journalEntries,
+  mcpTokens,
+  pantryItems,
+  recipes,
+  shoppingItems,
+  streakCheckins,
+  streaks,
+  stores,
+  wishes,
+} from '../src/server/db/schema.ts'
+import { createGoal, createWish } from '../src/server/motivation/service.ts'
 import { provisionUser } from '../src/server/auth/provision.ts'
 import { searchFoods } from '../src/server/foods/service.ts'
 import { createRecipe, type CreateRecipeInput } from '../src/server/recipes/service.ts'
@@ -70,6 +83,9 @@ const user = await provisionUser(db, { id: authId, email })
 /* Wipe this account's cookbook data                                           */
 /* -------------------------------------------------------------------------- */
 
+await db.delete(streaks).where(eq(streaks.userId, user.id))
+await db.delete(goals).where(eq(goals.userId, user.id))
+await db.delete(wishes).where(eq(wishes.userId, user.id))
 const oldMeals = await db
   .delete(journalEntries)
   .where(eq(journalEntries.userId, user.id))
@@ -243,6 +259,36 @@ await assignStore(db, user.id, [...byName('đường cát trắng'), ...byName('
 await assignStore(db, user.id, [...byName('gừng'), ...byName('sả')], cho.id)
 console.log('shopping: 5 (4 sorted, 1 unsorted)')
 
+// Streaks created a month ago, so the week grid has history instead of idle days.
+const monthAgo = new Date(Date.now() - 30 * 86_400_000)
+const [comNha] = await db
+  .insert(streaks)
+  .values([
+    { userId: user.id, name: 'Nấu cơm cho vợ', kind: 'daily_rest', restPerWeek: 1, trigger: 'tick', remindAt: '17:00', position: 0, createdAt: monthAgo },
+    { userId: user.id, name: 'Ghi nhật ký', kind: 'daily', trigger: 'any_meal', remindAt: '21:00', position: 1, createdAt: monthAgo },
+    { userId: user.id, name: 'Chinh phục món mới', kind: 'weekly', timesPerWeek: 1, trigger: 'new_dish', position: 2, createdAt: monthAgo },
+  ])
+  .returning()
+// Twelve days ticked by hand, with day 3 skipped (the weekly rest day). Yesterday
+// and the day before come from the meals below.
+await db.insert(streakCheckins).values(
+  [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].filter((n) => n !== 3).map((n) => ({ streakId: comNha.id, day: vnDate(-n) })),
+)
+console.log('streaks: 3')
+
+await createGoal(db, user.id, {
+  title: 'Tháng này nấu 20 bữa',
+  metric: 'meals',
+  tag: null,
+  target: 20,
+  startsOn: `${vnDate().slice(0, 8)}01`,
+  endsOn: vnDate(14),
+})
+await createWish(db, user.id, { recipeId: seededIds['Gà kho gừng'] })
+await createWish(db, user.id, { title: 'Bánh mì cuộn quế', sourceUrl: 'https://www.youtube.com/watch?v=example' })
+await createWish(db, user.id, { title: 'Phở bò Hà Nội', note: 'Học nấu nước dùng' })
+console.log('goal: 1, wishes: 3 (one conquered by the meal below)')
+
 // Past meals without pantry use, so the pantry and shopping list above stay as seeded.
 await createMeal(
   db,
@@ -253,6 +299,7 @@ await createMeal(
     note: 'Tối bận, 10 phút xong.',
     used: [],
     bought: [],
+    streakIds: [comNha.id],
   },
   null,
 )
@@ -268,6 +315,7 @@ await createMeal(
     note: 'Vợ khen nước kho vừa, lần sau thêm tiêu.',
     used: [],
     bought: [{ name: 'rau muống', amount: '1 bó' }],
+    streakIds: [comNha.id],
   },
   null,
 )

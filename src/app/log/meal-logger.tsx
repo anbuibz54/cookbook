@@ -5,12 +5,14 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { proposeMealAction, saveMealAction } from '@/app/_actions/journal'
 import { parseAmount } from '@/lib/amount'
 import { shrinkPhoto } from '@/lib/photo'
+import { matchKey } from '@/lib/match'
 import { normalizeForSearch } from '@/lib/text'
 
 type RecipeChoice = { id: string; title: string; searchText: string }
 type PantryChoice = { id: string; name: string; have: string }
 type Dish = { recipeId: string | null; name: string }
 type UseRow = { pantryItemId: string; name: string; have: string; amount: string; forDish: string; ticked: boolean }
+type StreakChoice = { id: string; name: string; trigger: 'tick' | 'any_meal' | 'new_dish'; doneToday: boolean }
 type BuyRow = { key: string; name: string; amount: string; forDish: string; ticked: boolean }
 
 const keyOf = (name: string) => normalizeForSearch(name)
@@ -30,12 +32,17 @@ export function MealLogger({
   pantry,
   initialDish,
   backHref,
+  cooked,
+  streaks,
 }: {
   today: string
   recipes: RecipeChoice[]
   pantry: PantryChoice[]
   initialDish: Dish | null
   backHref: string
+  /** Dish identity (`r:<recipeId>` / `n:<matchKey>`) → times logged before. */
+  cooked: Record<string, number>
+  streaks: StreakChoice[]
 }) {
   const [dishes, setDishes] = useState<Dish[]>(initialDish ? [initialDish] : [])
   const [query, setQuery] = useState('')
@@ -43,6 +50,10 @@ export function MealLogger({
   const [bought, setBought] = useState<BuyRow[]>([])
   const [cookedOn, setCookedOn] = useState(today)
   const [note, setNote] = useState('')
+  // Tick streaks start ticked unless today already counts; logging a meal is usually the point.
+  const [streakIds, setStreakIds] = useState(() =>
+    streaks.filter((s) => s.trigger === 'tick' && !s.doneToday).map((s) => s.id),
+  )
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [newBuy, setNewBuy] = useState('')
@@ -137,6 +148,7 @@ export function MealLogger({
         note: note.trim() || null,
         used: used.filter((r) => r.ticked).map((r) => ({ pantryItemId: r.pantryItemId, amount: r.amount })),
         bought: bought.filter((r) => r.ticked).map((r) => ({ name: r.name, amount: r.amount })),
+        streakIds,
       }),
     )
     if (photo) form.set('photo', photo.blob, 'meal.jpg')
@@ -446,6 +458,54 @@ export function MealLogger({
             </form>
           </section>
         </>
+      ) : null}
+
+      {streaks.length > 0 && dishes.length > 0 ? (
+        <section className="flex flex-col gap-2.5 rounded-[18px] border border-line bg-surface px-4 py-3.5">
+          <h2 className="font-display text-lg font-bold">Tính vào</h2>
+          <div className="flex flex-wrap gap-2">
+            {streaks.map((s) => {
+              if (s.trigger === 'tick') {
+                const on = streakIds.includes(s.id)
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setStreakIds((ids) => (on ? ids.filter((i) => i !== s.id) : [...ids, s.id]))}
+                    className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium ${
+                      on ? 'border-2 border-ink bg-primary text-white' : 'border border-line bg-surface text-muted'
+                    }`}
+                  >
+                    {on ? <CheckIcon /> : null}
+                    {s.name}
+                  </button>
+                )
+              }
+              if (s.trigger === 'any_meal') {
+                return (
+                  <span key={s.id} className="flex h-9 items-center gap-1.5 rounded-full border-2 border-ink bg-protein px-3 text-[13px] font-medium text-white">
+                    <CheckIcon />
+                    {s.name}
+                  </span>
+                )
+              }
+              const fresh = dishes.filter((d) => ![d.recipeId ? `r:${d.recipeId}` : null, `n:${matchKey(d.name)}`].some((k) => k && cooked[k]))
+              const times = Math.max(0, ...dishes.map((d) => Math.max(cooked[`n:${matchKey(d.name)}`] ?? 0, d.recipeId ? (cooked[`r:${d.recipeId}`] ?? 0) : 0)))
+              return (
+                <span
+                  key={s.id}
+                  className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] ${
+                    fresh.length ? 'border-2 border-ink bg-carbs font-medium' : 'border border-dashed border-ink text-muted'
+                  }`}
+                >
+                  {fresh.length ? <CheckIcon /> : null}
+                  {fresh.length ? `Món mới: ${fresh.map((d) => d.name).join(', ')}` : `Món mới: không (đã nấu ${times} lần)`}
+                </span>
+              )
+            })}
+          </div>
+        </section>
       ) : null}
 
       {/* Note */}

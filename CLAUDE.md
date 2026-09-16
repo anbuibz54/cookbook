@@ -151,7 +151,7 @@ shop needs web search and local knowledge, so it is Claude's, through
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
 "Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
-2 streaks, goals, wish board, photo wall, "Thành tích" tab → 3 in-app AI
+2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI
 (multi-provider, keys encrypted per user) → 4 web push reminders per streak
 (Supabase `pg_cron` + `pg_net`, enabled by the user) → 5 monthly share card.
 
@@ -176,13 +176,39 @@ The daily log, and the moment the pantry learns what was used. Mockups: page
   `next.config.ts`). Served by `/api/photos/[...path]`, which checks the path
   is the caller's and caches forever — paths are never reused.
 
+## Motivation (phase 2, built 2026-09-16)
+
+`src/server/motivation/service.ts`, screens `/achievements` (5th tab),
+`/streaks/new` (`?preset=com-nha|nhat-ky|mon-moi`), `/streaks/[id]`, `/goals/new`,
+`/wishes/new`; compact streak cards on Hôm nay.
+
+- **Derive, do not store.** Only two things are stored: ticks for `tick`
+  streaks (**streak_checkins**, cascade with the meal that ticked them) and the
+  meal that conquered a wish (**wishes.conquered_entry_id**, set null when that
+  meal is deleted). Streak days for `any_meal`/`new_dish`, goal progress and
+  "món mới" are computed from the journal on every read, so deleting or
+  back-dating a meal can never leave a number lying.
+- **Món mới** (`dishHistory`): a dish is new when neither its recipe nor its
+  normalised name appears in an earlier meal (`dishKeys`).
+- **Streak rules** (`src/lib/streaks.ts`, pure, `pnpm check:streaks`): kinds
+  `daily`, `daily_rest` (N misses per Mon–Sun week), `weekly` (N days per
+  week, counted in weeks). Today never breaks a streak. Expect to get the
+  weekday arithmetic in a test case wrong before the code — two cases were.
+- **Goals**: `meals`, `new_dishes`, `tagged` (distinct recipes with the tag)
+  over a date range; shown until 30 days after they end.
+- **Wishes** are conquered inside the meal transaction (`conquerWishes`):
+  same recipe, or same normalised name. MCP `add_wish` lets Claude pin one.
+- `remind_at` is stored per streak ("HH:MM", Vietnam time) for phase 4; no
+  notification is sent yet and the form says so.
+
 ## MCP (`src/server/mcp/server.ts`)
 
-Thirteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
+Fourteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
 `create_recipe`, `update_recipe` (full-list replacement, snapshots history).
 Foods: `search_foods`, `create_food`. Kitchen: `list_pantry`,
 `save_pantry_items`, `remove_pantry_items`, `suggest_from_pantry`,
 `get_shopping_list`, `add_to_shopping_list`, `assign_shopping_stores`.
+Motivation: `add_wish`.
 
 **Descriptions are the prompt** — the product rules (link foods, label estimates
 honestly, credit sources, rewrite steps in own words, ask where the user lives
@@ -209,6 +235,7 @@ Connect Claude Code:
 - `pnpm foods:import` — reference data, see above.
 - `pnpm check:match`, `pnpm check:cook` — the two name matchers; no database.
 - `pnpm check:amount` — the meal-log amount parser; no database.
+- `pnpm check:streaks` — streak rules; no database.
 - `pnpm storage:ensure` — creates/refreshes the private photo bucket.
 - `pnpm seed:test` — (re)creates `cookbook.test@example.com` with sample data,
   password in `.env.local`. Wipes only that account. Resetting the password
@@ -238,7 +265,7 @@ the energy bar is only readable by colour. Light mode only; cook mode gets its
 own dark screen rather than an inverted theme.
 
 Screens built: `/` "Hôm nay" (log CTA + journal feed; settings via the gear),
-`/log`, `/journal/[id]`, `/recipes` list, `/recipes/[id]` detail (servings
+`/log`, `/journal/[id]`, `/achievements` + streak/goal/wish forms, `/recipes` list, `/recipes/[id]` detail (servings
 stepper scales quantities client-side; per-serving nutrition stays fixed),
 `/recipes/[id]/cook` cook mode (last step → `/log?recipe=`),
 `/pantry`, `/shopping`, `/recipes/new` (explains that recipes arrive via
@@ -247,7 +274,7 @@ Claude), `/settings` (reached from the gear on Hôm nay, not the tab bar).
 ### Navigation
 
 - **Tab bar lives in the root layout** (`TabBar`, shown only on `/`, `/recipes`,
-  `/pantry`, `/shopping`, `/settings`). Pages under it pad with `pb-32`. Do not
+  `/pantry`, `/shopping`, `/achievements`, `/settings`). Pages under it pad with `pb-32`. Do not
   render it from a page again — it would slide with the page.
 - **Every page wraps its root in `<PageTransition>`**, and every internal link
   says what kind of move it is: `transitionTypes={['nav-forward']}` going deeper,

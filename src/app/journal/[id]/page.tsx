@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteMealAction } from '@/app/_actions/journal'
+import { ConfirmForm } from '@/components/confirm-form'
 import { PageTransition } from '@/components/page-transition'
 import { Thumb } from '@/components/thumb'
 import { requireUser } from '@/lib/auth/dal'
@@ -10,7 +11,6 @@ import { photoUrl } from '@/lib/photo-url'
 import { dayLabel, timeLabel } from '@/lib/dates'
 import { db } from '@/server/db'
 import { getMeal, type JournalItem } from '@/server/journal/service'
-import { ConfirmDelete } from './confirm-delete'
 
 function amountOf(item: JournalItem) {
   if (item.usedAll) return 'hết'
@@ -33,6 +33,7 @@ export default async function MealPage({ params, searchParams }: PageProps<'/jou
   const reduced = Number(query.reduced ?? 0)
   const removed = Number(query.removed ?? 0)
   const unchanged = typeof query.unchanged === 'string' ? query.unchanged : null
+  const conquered = typeof query.conquered === 'string' ? query.conquered : null
 
   return (
     <PageTransition>
@@ -51,7 +52,7 @@ export default async function MealPage({ params, searchParams }: PageProps<'/jou
 
         {saved ? (
           <div role="status" className="flex flex-col gap-1 rounded-[18px] border-2 border-ink bg-tile-mint px-4 py-3 shadow-pop-sm">
-            <span className="font-display text-lg font-extrabold">Đã ghi bữa!</span>
+            <span className="font-display text-lg font-extrabold">{conquered ? `Chinh phục ${conquered}!` : 'Đã ghi bữa!'}</span>
             <span className="text-sm text-pretty">
               {reduced + removed > 0
                 ? `Tủ lạnh: ${[removed ? `bỏ ${removed} món đã hết` : null, reduced ? `trừ bớt ${reduced} món` : null]
@@ -100,7 +101,11 @@ export default async function MealPage({ params, searchParams }: PageProps<'/jou
         <ItemList title="Đã dùng từ tủ lạnh" items={used} amount={amountOf} />
         <ItemList title="Mua thêm" items={bought} amount={amountOf} />
 
-        <ConfirmDelete action={deleteMealAction.bind(null, entry.id)} />
+        <ConfirmForm
+          action={deleteMealAction.bind(null, entry.id)}
+          question="Xoá bữa này khỏi nhật ký? Tủ lạnh sẽ không được cộng lại."
+          label="Xoá bữa này"
+        />
       </div>
     </PageTransition>
   )

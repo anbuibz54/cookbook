@@ -7,6 +7,8 @@ import { dayLabel, timeLabel, vnDate } from '@/lib/dates'
 import { photoUrl } from '@/lib/photo-url'
 import { db } from '@/server/db'
 import { listJournal, mealCounts } from '@/server/journal/service'
+import { nextWish, streakCards } from '@/server/motivation/service'
+import { StreakCard } from '@/components/streak-card'
 
 /** "Thứ tư, 16/09" — Vietnam's calendar, wherever the server runs. */
 function todayLabel() {
@@ -25,7 +27,12 @@ function todayLabel() {
  */
 export default async function TodayPage() {
   const { user } = await requireUser()
-  const [meals, counts] = await Promise.all([listJournal(db, user.id, { limit: 20 }), mealCounts(db, user.id)])
+  const [meals, counts, streaks, wish] = await Promise.all([
+    listJournal(db, user.id, { limit: 20 }),
+    mealCounts(db, user.id),
+    streakCards(db, user.id),
+    nextWish(db, user.id),
+  ])
   const today = vnDate()
 
   return (
@@ -52,6 +59,23 @@ export default async function TodayPage() {
             </Link>
           </div>
         </header>
+
+        {streaks.length > 0 ? (
+          <div className="flex flex-col gap-2.5">
+            {streaks.map((card) => (
+              <StreakCard
+                key={card.id}
+                card={card}
+                compact
+                hint={
+                  card.trigger === 'new_dish' && card.thisWeek < card.timesPerWeek && wish
+                    ? `Gợi ý: ${wish.title} đang nằm trên bảng muốn chinh phục.`
+                    : null
+                }
+              />
+            ))}
+          </div>
+        ) : null}
 
         <Link
           href="/log" transitionTypes={['nav-forward']}

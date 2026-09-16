@@ -456,3 +456,103 @@ export const journalItems = cookbook.table('journal_items', {
   index('journal_items_entry_idx').on(t.entryId, t.kind, t.position),
   index('journal_items_food_id_idx').on(t.foodId),
 ])
+
+/* -------------------------------------------------------------------------- */
+/* Motivation — streaks, goals, the wish board                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How strict a streak is. Chosen per streak, because "nấu cơm cho vợ" and
+ * "chinh phục món mới" are not the same kind of promise.
+ *
+ *  - daily        every day; one missed day ends it
+ *  - daily_rest   every day, with `restPerWeek` free misses per Mon–Sun week
+ *  - weekly       `timesPerWeek` days in each week; counted in weeks
+ */
+export const streakKindEnum = cookbook.enum('streak_kind', ['daily', 'daily_rest', 'weekly'])
+
+/**
+ * What makes a day count.
+ *
+ *  - tick       the user ticks it (on the meal log, or on Hôm nay)
+ *  - any_meal   any meal logged that day
+ *  - new_dish   a meal with a dish never logged before
+ *
+ * Only `tick` stores rows (streak_checkins). The other two are read from the
+ * journal every time, so deleting a meal can never leave a streak lying.
+ */
+export const streakTriggerEnum = cookbook.enum('streak_trigger', ['tick', 'any_meal', 'new_dish'])
+
+export const streaks = cookbook.table('streaks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  kind: streakKindEnum('kind').notNull(),
+  restPerWeek: smallint('rest_per_week').notNull().default(0),
+  timesPerWeek: smallint('times_per_week').notNull().default(1),
+  trigger: streakTriggerEnum('trigger').notNull(),
+  /** "HH:MM" Vietnam time; null = no reminder. Sent by the reminder job (phase 4). */
+  remindAt: text('remind_at'),
+  position: smallint('position').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('streaks_user_idx').on(t.userId, t.position),
+])
+
+/**
+ * A ticked day for a `tick` streak. `entryId` set = ticked while logging that
+ * meal (and goes away with it); null = ticked by hand on Hôm nay.
+ */
+export const streakCheckins = cookbook.table('streak_checkins', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  streakId: uuid('streak_id').notNull().references(() => streaks.id, { onDelete: 'cascade' }),
+  day: date('day').notNull(),
+  entryId: uuid('entry_id').references(() => journalEntries.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('streak_checkins_streak_day_idx').on(t.streakId, t.day),
+  index('streak_checkins_entry_idx').on(t.entryId),
+])
+
+/**
+ *  - meals        meals logged in the period ("tháng 9 nấu 20 bữa")
+ *  - new_dishes   dishes cooked for the first time ever
+ *  - tagged       distinct recipes carrying `tag` cooked ("10 món bánh trước Tết")
+ */
+export const goalMetricEnum = cookbook.enum('goal_metric', ['meals', 'new_dishes', 'tagged'])
+
+/** A long-term target over a date range. Progress is counted from the journal on read. */
+export const goals = cookbook.table('goals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  metric: goalMetricEnum('metric').notNull(),
+  tag: text('tag'),
+  target: integer('target').notNull(),
+  startsOn: date('starts_on').notNull(),
+  endsOn: date('ends_on').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('goals_user_idx').on(t.userId, t.endsOn),
+])
+
+/**
+ * "Muốn chinh phục": dishes the user wants to cook one day — from the sổ, a
+ * video link, or just a name. Conquered when a logged meal contains it; the
+ * link to that meal (and its photo) is the trophy. Deleting the meal un-conquers.
+ */
+export const wishes = cookbook.table('wishes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  matchKey: text('match_key').notNull(),
+  recipeId: uuid('recipe_id').references(() => recipes.id, { onDelete: 'set null' }),
+  sourceUrl: text('source_url'),
+  note: text('note'),
+  conqueredEntryId: uuid('conquered_entry_id').references(() => journalEntries.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('wishes_user_idx').on(t.userId, t.createdAt),
+  index('wishes_recipe_idx').on(t.recipeId),
+  index('wishes_entry_idx').on(t.conqueredEntryId),
+])

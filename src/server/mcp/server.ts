@@ -30,6 +30,7 @@ import {
   type FullRecipe,
 } from '../recipes/service'
 import { createFood, createFoodInput, foodLabel, searchFoods } from '../foods/service'
+import { createWish, wishInput } from '../motivation/service'
 import {
   listPantry,
   pantryItemInput,
@@ -718,6 +719,35 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         results.push(`${STORE_LABEL[store.kind]} · ${store.name}: ${moved} món`)
       }
       return text(`${results.join('\n')}\n\n${baseUrl}/shopping`)
+    },
+  )
+
+  server.registerTool(
+    'add_wish',
+    {
+      title: 'Pin a dish to the wish board',
+      description:
+        'Pin a dish the user WANTS TO COOK one day to their "Muốn chinh phục" board — for "ghim món này", ' +
+        '"để dành nấu sau", or a video they liked but are not saving as a recipe yet. Not for saving a recipe ' +
+        '(that is create_recipe). If the recipe is already in the sổ (search_recipes), pass recipe_id. ' +
+        'Pass the video/page link as source_url. The app marks the wish conquered by itself when the user ' +
+        'logs a meal with this dish — never try to do that.',
+      inputSchema: {
+        title: z.string().optional().describe('Tên món tiếng Việt. Bỏ trống khi có recipe_id.'),
+        recipe_id: z.string().optional(),
+        source_url: z.string().optional(),
+        note: z.string().optional().describe('Ngắn, lời của người dùng nếu có.'),
+      },
+    },
+    async ({ title, recipe_id, source_url, note }) => {
+      const parsed = wishInput.safeParse({ title, recipeId: recipe_id, sourceUrl: source_url, note })
+      if (!parsed.success) return text(`Rejected — ${firstIssue(parsed.error)}`)
+      try {
+        const wish = await createWish(db, principal.userId, parsed.data)
+        return text(`Đã ghim “${wish.title}”.\n\n${baseUrl}/achievements`)
+      } catch (error) {
+        return text(`Rejected — ${error instanceof Error ? error.message : 'could not save'}`)
+      }
     },
   )
 

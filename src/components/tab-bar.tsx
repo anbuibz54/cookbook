@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation'
  * destinations (a recipe, cook mode, login).
  *
  * Every tab is a flex slot. The current one grows and reveals its label, the
- * rest stay icon-sized; with no current tab (Settings) all four share the
+ * rest stay icon-sized; with no current tab (Settings) all five share the
  * width evenly instead of bunching to the left. `flex-grow` animates, so moving
  * between tabs is a slide of the highlight rather than a jump.
  */
@@ -50,10 +50,20 @@ const TABS = [
       </>
     ),
   },
+  {
+    href: '/achievements',
+    label: 'Thành tích',
+    icon: (
+      <>
+        <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" />
+        <path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
+      </>
+    ),
+  },
 ]
 
 /** Pages that show the bar. Exact matches: `/recipes/[id]` is a detail screen, not a tab. */
-const WITH_BAR = new Set(['/', '/recipes', '/pantry', '/shopping', '/settings'])
+const WITH_BAR = new Set(['/', '/recipes', '/pantry', '/shopping', '/achievements', '/settings'])
 
 /** A dot that only appears if this tab's navigation is slow (see .tab-pending in globals.css). */
 function PendingDot() {
