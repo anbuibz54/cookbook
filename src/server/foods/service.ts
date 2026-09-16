@@ -10,7 +10,7 @@
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from '../db'
-import { foodPortions, foods } from '../db/schema'
+import { foodPortions, foods, recipeIngredients, recipes } from '../db/schema'
 import { normalizeForSearch } from '@/lib/text'
 
 export type Food = typeof foods.$inferSelect
@@ -170,4 +170,62 @@ export async function exactFood(db: Db, userId: string, name: string): Promise<F
       (f) => normalizeForSearch(f.nameVi) === key || f.aliases.some((a) => normalizeForSearch(a) === key),
     ) ?? null
   )
+}
+
+export type NameSuggestion = {
+  name: string
+  foodId: string | null
+  /** Recipes that use this name, so the cook sees it will match them. */
+  recipes: string[]
+}
+
+/**
+ * Names to offer while typing a pantry or shopping item: first the names the
+ * user's own recipes use (typing one of those is what makes "nấu được gì"
+ * work), then foods from the nutrition data with a Vietnamese name.
+ */
+export async function suggestIngredientNames(db: Db, userId: string, query: string, limit = 8): Promise<NameSuggestion[]> {
+  const needle = normalizeForSearch(query)
+  if (!needle) return []
+  const words = needle.split(' ')
+  // Every typed word must start a word of the Vietnamese name: "sa" finds "sả"
+  // and "sữa", not "muối" through its English name "Salt".
+  const fits = (name: string) => {
+    const parts = normalizeForSearch(name).split(' ')
+    return words.every((w) => parts.some((p) => p.startsWith(w)))
+  }
+
+  const lines = await db
+    .select({ name: recipeIngredients.name, foodId: recipeIngredients.foodId, title: recipes.title })
+    .from(recipeIngredients)
+    .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
+    .where(eq(recipes.userId, userId))
+
+  const byName = new Map<string, NameSuggestion & { starts: boolean }>()
+  for (const line of lines) {
+    const key = normalizeForSearch(line.name)
+    if (!fits(line.name)) continue
+    const entry = byName.get(key) ?? { name: line.name, foodId: line.foodId, recipes: [], starts: key.startsWith(needle) }
+    if (!entry.recipes.includes(line.title)) entry.recipes.push(line.title)
+    entry.foodId ??= line.foodId
+    byName.set(key, entry)
+  }
+  const fromRecipes = [...byName.values()]
+    .sort((a, b) => Number(b.starts) - Number(a.starts) || b.recipes.length - a.recipes.length || a.name.length - b.name.length)
+    .map((entry) => ({ name: entry.name, foodId: entry.foodId, recipes: entry.recipes }))
+
+  const foodsHit = await searchFoods(db, userId, { query, limit: limit * 4 })
+  const fromFoods = foodsHit
+    .filter((f) => f.nameVi && fits(f.nameVi) && !byName.has(normalizeForSearch(f.nameVi)))
+    .map((f) => ({ name: f.nameVi!, foodId: f.id, recipes: [] }))
+
+  const seen = new Set<string>()
+  return [...fromRecipes, ...fromFoods]
+    .filter((s) => {
+      const key = normalizeForSearch(s.name)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, limit)
 }

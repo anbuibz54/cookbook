@@ -172,3 +172,20 @@ body {
   background: var(--background);
   color: var(--ink);
 }
+
+/*
+ * iOS Safari gives date/time inputs an intrinsic minimum width and centres the
+ * value, so inside a grid or a narrow card they burst out of their box.
+ */
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import {
   addShoppingItemAction,
   removeShoppingItemAction,
@@ -8,41 +8,46 @@ import {
   updateShoppingItemAction,
   type KitchenFormState,
 } from '@/app/_actions/kitchen'
+import { AmountField, fieldClass, IngredientNameField } from '@/components/kitchen-fields'
 
 export type StoreChoice = { value: string; label: string }
 
-const input =
-  'h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 text-[15px] outline-none placeholder:text-placeholder focus-visible:border-ink'
-
-function StoreSelect({ choices, defaultValue, label }: { choices: StoreChoice[]; defaultValue?: string; label: string }) {
+function StoreSelect({
+  choices,
+  value,
+  onChange,
+  defaultValue,
+}: {
+  choices: StoreChoice[]
+  value?: string
+  onChange?: (value: string) => void
+  defaultValue?: string
+}) {
   return (
-    <select name="store" defaultValue={defaultValue ?? ''} aria-label={label} className={input}>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-muted">Mua ở đâu</span>
+      <select
+        name="store"
+        {...(onChange ? { value, onChange: (e) => onChange(e.target.value) } : { defaultValue: defaultValue ?? '' })}
+        className={fieldClass}
+      >
       <option value="">Chưa xếp chỗ mua</option>
       {choices.map((c) => (
         <option key={c.value} value={c.value}>
           {c.label}
         </option>
       ))}
-    </select>
+      </select>
+    </label>
   )
 }
 
 /** "+ Thêm món cần mua": by hand, with where to buy it if you already know. */
 export function ShoppingAddForm({ choices }: { choices: StoreChoice[] }) {
   const [open, setOpen] = useState(false)
+  // Kept across saves: the next item is usually from the same shop.
+  const [store, setStore] = useState('')
   const [state, action, pending] = useActionState<KitchenFormState, FormData>(addShoppingItemAction, {})
-  const form = useRef<HTMLFormElement>(null)
-  const nameInput = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!state.done) return
-    // Keep the chosen shop: the next item is usually from the same one.
-    const store = form.current?.querySelector<HTMLSelectElement>('select[name="store"]')?.value
-    form.current?.reset()
-    const select = form.current?.querySelector<HTMLSelectElement>('select[name="store"]')
-    if (select && store) select.value = store
-    nameInput.current?.focus()
-  }, [state.done])
 
   if (!open) {
     return (
@@ -60,22 +65,12 @@ export function ShoppingAddForm({ choices }: { choices: StoreChoice[] }) {
   }
 
   return (
-    <form ref={form} action={action} className="flex flex-col gap-2.5 rounded-[18px] border-2 border-ink bg-surface p-3.5">
-      <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-2.5">
-        <input
-          ref={nameInput}
-          name="name"
-          required
-          maxLength={80}
-          autoFocus
-          autoComplete="off"
-          placeholder="Tên: cà chua, sữa tươi…"
-          aria-label="Tên"
-          className={input}
-        />
-        <input name="amount" autoComplete="off" placeholder="1 kg" aria-label="Số lượng" className={input} />
+    <form action={action} className="flex flex-col gap-3 rounded-[18px] border-2 border-ink bg-surface p-3.5">
+      <div key={state.done ?? 0} className="flex flex-col gap-3">
+        <IngredientNameField autoFocus placeholder="cà chua, sữa tươi…" />
+        <AmountField placeholder="1 kg, 2 bó" />
       </div>
-      <StoreSelect choices={choices} label="Mua ở đâu" />
+      <StoreSelect choices={choices} value={store} onChange={setStore} />
       {state.error ? (
         <p role="alert" className="text-sm text-primary">
           {state.error}
@@ -128,17 +123,9 @@ export function ShoppingLineRow({ line, first, choices }: { line: ShoppingRowVie
       <li className={`py-3 ${border}`}>
         <form action={action} className="flex flex-col gap-2.5">
           <span className="font-medium">{line.name}</span>
-          <input
-            name="amount"
-            defaultValue={line.amount}
-            autoFocus
-            autoComplete="off"
-            placeholder="Lượng, ví dụ 1 kg"
-            aria-label={`Lượng ${line.name}`}
-            className={input}
-          />
+          <AmountField defaultValue={line.amount} placeholder="1 kg, 2 bó" />
           <input type="hidden" name="note" value={line.note ?? ''} />
-          <StoreSelect choices={choices} defaultValue={line.storeValue} label={`Mua ${line.name} ở đâu`} />
+          <StoreSelect choices={choices} defaultValue={line.storeValue} />
           {state.error ? (
             <p role="alert" className="text-sm text-primary">
               {state.error}

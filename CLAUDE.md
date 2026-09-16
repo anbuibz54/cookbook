@@ -152,6 +152,14 @@ shop needs web search and local knowledge, so it is Claude's, through
   (`exactFood`), never a fuzzy one. The shop picker offers the user's stores
   plus plain kinds ("Bách Hóa Xanh" with no branch), created on first use.
   Edited rows are keyed by their values so the editor closes onto fresh data.
+  The name box suggests (`suggestIngredientNames`) the user's own recipe
+  ingredient names first, then foods with a Vietnamese name, matched on word
+  prefixes of the Vietnamese name only (English names made "sa" suggest muối).
+  It says whether the name matches a recipe, because a pantry name that
+  matches no recipe line never counts toward "nấu được gì".
+- **iOS date inputs** overflow grids and centre their text: globals.css resets
+  them. They also cannot show a placeholder, so `ExpiryField` overlays one and
+  offers +3 ngày / +1 tuần / +1 tháng.
   Writing still needs a network connection; there is no offline queue.
 - After cooking, the pantry is updated by logging the meal (see Journal).
   `/recipes/[id]/done` only redirects to `/log?recipe=<id>` now.

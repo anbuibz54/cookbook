@@ -1,15 +1,13 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import {
   addPantryItemAction,
   removePantryItemAction,
   updatePantryItemAction,
   type KitchenFormState,
 } from '@/app/_actions/kitchen'
-
-const input =
-  'h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 text-[15px] outline-none placeholder:text-placeholder focus-visible:border-ink'
+import { AmountField, ExpiryField, IngredientNameField } from '@/components/kitchen-fields'
 
 /**
  * "+ Thêm đồ vào tủ": the hand-entry path, for when there is no AI to ask.
@@ -19,14 +17,6 @@ const input =
 export function PantryAddForm({ today }: { today: string }) {
   const [open, setOpen] = useState(false)
   const [state, action, pending] = useActionState<KitchenFormState, FormData>(addPantryItemAction, {})
-  const form = useRef<HTMLFormElement>(null)
-  const nameInput = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!state.done) return
-    form.current?.reset()
-    nameInput.current?.focus()
-  }, [state.done])
 
   if (!open) {
     return (
@@ -44,28 +34,14 @@ export function PantryAddForm({ today }: { today: string }) {
   }
 
   return (
-    <form ref={form} action={action} className="flex flex-col gap-2.5 rounded-[18px] border-2 border-ink bg-surface p-3.5">
-      <input
-        ref={nameInput}
-        name="name"
-        required
-        maxLength={80}
-        autoFocus
-        autoComplete="off"
-        placeholder="Tên: trứng gà, hành lá, thịt ba chỉ…"
-        aria-label="Tên"
-        className={input}
-      />
-      <div className="grid grid-cols-2 gap-2.5">
-        <input name="amount" autoComplete="off" placeholder="Lượng: 6 quả, 500 g" aria-label="Số lượng" className={input} />
-        <label className="flex min-w-0 flex-col">
-          <span className="sr-only">Hạn dùng</span>
-          <input name="expiresOn" type="date" min={today} aria-label="Hạn dùng" className={`${input} font-mono text-sm`} />
-        </label>
+    <form action={action} className="flex flex-col gap-3 rounded-[18px] border-2 border-ink bg-surface p-3.5">
+      {/* Remounted after each save, which clears the fields for the next item. */}
+      <div key={state.done ?? 0} className="flex flex-col gap-3">
+        <IngredientNameField autoFocus placeholder="trứng gà, hành lá, thịt ba chỉ…" />
+        <AmountField />
+        <ExpiryField today={today} />
       </div>
-      <p className="text-xs text-pretty text-muted">
-        Lượng và hạn dùng không bắt buộc. Đã có trong tủ thì cộng dồn khi cùng đơn vị.
-      </p>
+      <p className="text-xs text-pretty text-muted">Đã có trong tủ thì cộng dồn khi cùng đơn vị.</p>
       {state.error ? (
         <p role="alert" className="text-sm text-primary">
           {state.error}
@@ -104,7 +80,7 @@ export type PantryRowView = {
  * it in the action instead showed the OLD amount for the half second before
  * the refreshed page arrived. A save that changes nothing closes here.
  */
-export function PantryItemRow({ item, first }: { item: PantryRowView; first: boolean }) {
+export function PantryItemRow({ item, first, today }: { item: PantryRowView; first: boolean; today: string }) {
   const [editing, setEditing] = useState(false)
   const [state, action, pending] = useActionState<KitchenFormState, FormData>(async (prev, form) => {
     const next = await updatePantryItemAction(item.id, prev, form)
@@ -122,24 +98,8 @@ export function PantryItemRow({ item, first }: { item: PantryRowView; first: boo
         <form action={action} className="flex flex-col gap-2.5">
           <span className="font-medium">{item.name}</span>
           <input type="hidden" name="note" value={item.note ?? ''} />
-          <div className="grid grid-cols-2 gap-2.5">
-            <input
-              name="amount"
-              defaultValue={item.amount}
-              autoFocus
-              autoComplete="off"
-              placeholder="Lượng, ví dụ 3 quả"
-              aria-label={`Lượng ${item.name}`}
-              className={input}
-            />
-            <input
-              name="expiresOn"
-              type="date"
-              defaultValue={item.expiresOn ?? ''}
-              aria-label={`Hạn dùng ${item.name}`}
-              className={`${input} font-mono text-sm`}
-            />
-          </div>
+          <AmountField defaultValue={item.amount} placeholder="3 quả, 500 g" />
+          <ExpiryField today={today} defaultValue={item.expiresOn} />
           {state.error ? (
             <p role="alert" className="text-sm text-primary">
               {state.error}

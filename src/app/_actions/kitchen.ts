@@ -7,7 +7,7 @@ import { db } from '@/server/db'
 import { parseAmount } from '@/lib/amount'
 import { matchKey } from '@/lib/match'
 import { canonicalUnit } from '@/lib/units'
-import { exactFood } from '@/server/foods/service'
+import { exactFood, suggestIngredientNames, type NameSuggestion } from '@/server/foods/service'
 import {
   listPantry,
   removePantryItems,
@@ -126,7 +126,8 @@ export async function addPantryItemAction(_prev: KitchenFormState, form: FormDat
   // agree; otherwise the new amount replaces the old one.
   const existing = (await listPantry(db, user.id)).find((p) => p.matchKey === matchKey(name))
   const sameUnit = existing?.quantity != null && quantity != null && existing.unit === canonicalUnit(unit)
-  const food = existing?.foodId ? null : await exactFood(db, user.id, name)
+  const picked = pickedFood(form)
+  const food = existing?.foodId || picked ? null : await exactFood(db, user.id, name)
 
   await savePantryItems(db, user.id, [
     {
@@ -135,7 +136,7 @@ export async function addPantryItemAction(_prev: KitchenFormState, form: FormDat
       unit,
       expiresOn: expires ?? existing?.expiresOn ?? null,
       note: note ?? existing?.note ?? null,
-      foodId: existing?.foodId ?? food?.id ?? null,
+      foodId: existing?.foodId ?? picked ?? food?.id ?? null,
     },
   ])
   revalidatePath('/pantry')
@@ -164,9 +165,10 @@ export async function addShoppingItemAction(_prev: KitchenFormState, form: FormD
   if (!name) return { error: 'Thiếu tên món.' }
   if (name.length > 80) return { error: 'Tên dài quá.' }
   const { quantity, unit, note } = amountFields(form)
-  const food = await exactFood(db, user.id, name)
+  const picked = pickedFood(form)
+  const food = picked ? null : await exactFood(db, user.id, name)
 
-  await addShoppingItems(db, user.id, [{ name, quantity, unit, note, foodId: food?.id ?? null }])
+  await addShoppingItems(db, user.id, [{ name, quantity, unit, note, foodId: picked ?? food?.id ?? null }])
 
   const storeId = await storeFromChoice(db, user.id, text(form, 'store'))
   if (storeId) {
@@ -196,4 +198,17 @@ export async function updateShoppingItemAction(
   if (!ok) return { error: 'Không lưu được.' }
   revalidatePath('/shopping')
   return { done: Date.now() }
+}
+
+/** Typing a pantry / shopping name: recipe ingredient names first, then foods. */
+export async function ingredientSuggestionsAction(query: string): Promise<NameSuggestion[]> {
+  const { user } = await requireUser()
+  if (typeof query !== 'string' || query.trim().length < 1 || query.length > 60) return []
+  return suggestIngredientNames(db, user.id, query)
+}
+
+/** A food id picked from the suggestions, if it is a valid id; the service still checks visibility. */
+function pickedFood(form: FormData) {
+  const value = text(form, 'foodId')
+  return value && id.safeParse(value).success ? value : null
 }

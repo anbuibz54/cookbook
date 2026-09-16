@@ -49,6 +49,7 @@ export default async function PantryPage() {
           <ul className="rounded-[18px] border border-line bg-surface px-3.5">
             {items.map((item, i) => (
               <PantryItemRow
+                today={vnDate()}
                 key={`${item.id}:${item.quantity}:${item.unit}:${item.expiresOn}`}
                 first={i === 0}
                 item={{
