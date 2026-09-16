@@ -46,7 +46,7 @@ function assert(condition: unknown, message: string) {
 
 const tools = await client.listTools()
 console.log('tools:', tools.tools.map((t) => t.name).join(', '))
-assert(tools.tools.length === 6, 'six tools are exposed')
+assert(tools.tools.length === 13, 'thirteen tools are exposed')
 
 // A food with round numbers, so the expected nutrition is easy to check by hand.
 const sugar = firstUuid(
@@ -144,15 +144,82 @@ assert(usdaFull.includes('"grams": 28.4'), '2 muỗng canh bơ → 30 ml × dens
 assert(usdaRecipe.includes('3/3 ingredients counted'), 'every line counted without supplied grams')
 assert(usdaRecipe.includes('Ước lượng'), 'typical portion sizes are reported as approximate')
 
+// ── Kitchen: pantry → suggestions → shopping list → shops ───────────────────
+
+const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+
+await call('save_pantry_items', {
+  items: [
+    { name: '[smoke] bột thử', quantity: 500, unit: 'g' },
+    { name: '[smoke] trứng thử', quantity: 2, unit: 'quả', expires_on: tomorrow },
+  ],
+})
+const pantry = await call('list_pantry', {})
+assert(pantry.includes('[smoke] bột thử') && pantry.includes(`HSD ${tomorrow}`), 'pantry keeps amounts and expiry')
+
+const pantryRecipe = firstUuid(
+  await call('create_recipe', {
+    title: '[smoke] Bánh thử',
+    servings: 1,
+    authored_by: 'ai',
+    ingredients: [
+      { name: '[smoke] bột thử', quantity: 200, unit: 'g' },
+      { name: '[smoke] trứng thử', quantity: 1, unit: 'quả', grams: 50 },
+      { name: '[smoke] sữa thử', quantity: 100, unit: 'ml', grams: 100 },
+      { name: 'muối', unit: 'vừa ăn' },
+    ],
+    steps: [{ body: 'Trộn rồi nướng.' }],
+  }),
+)
+
+const suggested = await call('suggest_from_pantry', {})
+const line = suggested.split('\n').find((l) => l.includes(pantryRecipe)) ?? ''
+assert(line.includes('[2/3]'), 'two of three countable ingredients are in the pantry')
+assert(line.includes('thiếu 1: [smoke] sữa thử'), 'only the genuinely missing ingredient is missing')
+assert(!line.includes('muối'), '"vừa ăn" lines are not treated as shopping')
+assert(line.includes('sắp hết hạn'), 'a recipe using something about to expire says so')
+
+await call('add_to_shopping_list', {
+  items: [{ name: '[smoke] sữa thử', quantity: 100, unit: 'ml', recipe_id: pantryRecipe }],
+})
+await call('add_to_shopping_list', {
+  items: [{ name: '[smoke] sữa thử', quantity: 50, unit: 'ml' }],
+})
+const beforeSort = await call('get_shopping_list', {})
+assert(
+  beforeSort.split('\n').filter((l) => l.includes('[smoke] sữa thử')).length === 1,
+  'the same item twice merges into one line',
+)
+assert(beforeSort.includes('150 ml'), 'merged amounts add up')
+assert(beforeSort.includes('[chưa phân loại]'), 'a new line has no shop until something sorts it')
+
+const shoppingId = firstUuid(beforeSort.split('\n').find((l) => l.includes('[smoke] sữa thử'))!)
+await call('assign_shopping_stores', {
+  assignments: [
+    {
+      item_ids: [shoppingId],
+      kind: 'bhx',
+      store_name: '[smoke] Bách Hóa Xanh thử',
+      address: '123 Đường Thử, Quận Thử',
+      maps_url: 'https://www.google.com/maps/search/?api=1&query=B%C3%A1ch+H%C3%B3a+Xanh',
+    },
+  ],
+})
+const afterSort = await call('get_shopping_list', {})
+assert(afterSort.includes('[Bách Hóa Xanh · [smoke] Bách Hóa Xanh thử]'), 'the line moved to its shop')
+
 await client.close()
 
 if (process.argv.includes('--keep')) {
   console.log(`\nAll checks passed. Kept: ${baseUrl}/recipes/${recipeId}`)
 } else {
   const { db } = await import('../src/server/db/index.ts')
-  const { foods, recipes } = await import('../src/server/db/schema.ts')
+  const { foods, pantryItems, recipes, shoppingItems, stores } = await import('../src/server/db/schema.ts')
   const { like } = await import('drizzle-orm')
   // By prefix rather than by id, so leftovers from a run that crashed midway go too.
+  await db.delete(shoppingItems).where(like(shoppingItems.name, '[smoke]%'))
+  await db.delete(stores).where(like(stores.name, '[smoke]%'))
+  await db.delete(pantryItems).where(like(pantryItems.name, '[smoke]%'))
   await db.delete(recipes).where(like(recipes.title, '[smoke]%'))
   await db.delete(foods).where(like(foods.nameVi, '[smoke]%'))
   console.log('\nAll checks passed. Test data removed.')

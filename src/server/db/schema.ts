@@ -15,6 +15,7 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -256,6 +257,106 @@ export const recipeVersions = cookbook.table('recipe_versions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('recipe_versions_recipe_idx').on(t.recipeId, t.createdAt),
+])
+
+/* -------------------------------------------------------------------------- */
+/* Pantry — what is in the kitchen right now                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One thing in the fridge or cupboard.
+ *
+ * `foodId` is what makes matching against a recipe reliable; `name` is what
+ * the user said. Unlinked rows still work — matching falls back to the
+ * normalised name (see src/lib/match.ts).
+ *
+ * `quantity`/`unit` are what the user gave ("nửa bó hành"); `grams` is the
+ * resolved weight where the unit allows it, which is the only form two
+ * different wordings can be compared in. All three may be null: "còn hành lá"
+ * is a legitimate pantry entry and still answers "nấu được món này không".
+ *
+ * `expiresOn` is a date, not a timestamp — nobody knows the hour their rau
+ * goes off, and a date is what a label carries.
+ */
+export const pantryItems = cookbook.table('pantry_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  foodId: uuid('food_id').references(() => foods.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  /** Normalised `name`, so pantry ↔ ingredient matching is one comparison. */
+  matchKey: text('match_key').notNull(),
+  quantity: real('quantity'),
+  quantityMax: real('quantity_max'),
+  unit: text('unit'),
+  grams: real('grams'),
+  expiresOn: date('expires_on'),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  // One row per thing: adding "trứng gà" twice updates, never duplicates.
+  uniqueIndex('pantry_user_key_idx').on(t.userId, t.matchKey),
+  index('pantry_user_expiry_idx').on(t.userId, t.expiresOn),
+  index('pantry_food_id_idx').on(t.foodId),
+])
+
+/* -------------------------------------------------------------------------- */
+/* Shopping                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Where something is bought. The four kinds are fixed so the list groups the
+ * same way every week; the branch itself (name, address, map link) is whatever
+ * Claude found for the user's area.
+ */
+export const storeKindEnum = cookbook.enum('store_kind', ['bhx', 'cho', 'sieu_thi', 'online'])
+
+export const stores = cookbook.table('stores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: storeKindEnum('kind').notNull(),
+  /** Branch name as people say it: "Bách Hóa Xanh Nguyễn Thị Thập", "chợ Tân Mỹ". */
+  name: text('name').notNull(),
+  address: text('address'),
+  /** Google Maps link, found by Claude. Shown as a button, never auto-opened. */
+  mapsUrl: text('maps_url'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('stores_user_name_idx').on(t.userId, t.kind, t.name),
+  index('stores_user_idx').on(t.userId),
+])
+
+/**
+ * A line on the shopping list. Created from what a recipe needs and the pantry
+ * lacks, or by hand.
+ *
+ * `storeId` is null until something classifies it — the list is useful
+ * unsorted, and sorting it is Claude's job (it needs web search to know what
+ * Bách Hóa Xanh actually stocks).
+ *
+ * `boughtAt` is a soft tick rather than a delete, so a list can be reviewed
+ * after the trip; `recipeId` records why the line is there.
+ */
+export const shoppingItems = cookbook.table('shopping_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  foodId: uuid('food_id').references(() => foods.id, { onDelete: 'set null' }),
+  recipeId: uuid('recipe_id').references(() => recipes.id, { onDelete: 'set null' }),
+  storeId: uuid('store_id').references(() => stores.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  matchKey: text('match_key').notNull(),
+  quantity: real('quantity'),
+  unit: text('unit'),
+  grams: real('grams'),
+  note: text('note'),
+  boughtAt: timestamp('bought_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  // The open list is what the screen reads; bought rows drop out of this index.
+  index('shopping_user_open_idx').on(t.userId, t.createdAt).where(sql`${t.boughtAt} is null`),
+  index('shopping_user_store_idx').on(t.userId, t.storeId),
+  index('shopping_recipe_idx').on(t.recipeId),
+  index('shopping_food_id_idx').on(t.foodId),
 ])
 
 /* -------------------------------------------------------------------------- */

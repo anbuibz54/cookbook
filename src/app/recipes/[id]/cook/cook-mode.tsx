@@ -271,7 +271,7 @@ export function CookMode({
         </button>
         {last ? (
           <Link
-            href={`/recipes/${recipeId}`}
+            href={`/recipes/${recipeId}/done`}
             className="flex h-15 items-center justify-center rounded-full bg-protein font-display text-xl font-extrabold text-cook-bg"
           >
             Xong, ăn thôi

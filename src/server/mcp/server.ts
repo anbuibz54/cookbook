@@ -30,6 +30,23 @@ import {
   type FullRecipe,
 } from '../recipes/service'
 import { createFood, createFoodInput, foodLabel, searchFoods } from '../foods/service'
+import {
+  listPantry,
+  pantryItemInput,
+  removePantryItems,
+  savePantryItems,
+  suggestFromPantry,
+} from '../pantry/service'
+import {
+  addShoppingItems,
+  assignStore,
+  listShopping,
+  saveStore,
+  shoppingItemInput,
+  storeInput,
+  STORE_KINDS,
+  STORE_LABEL,
+} from '../shopping/service'
 import { formatQuantity } from '@/lib/units'
 import { CONFIDENCE_LABEL, round, type RecipeNutrition } from '@/lib/nutrition'
 
@@ -180,6 +197,8 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         'Count units (quả, củ, tép, lát, cái) are converted with the food\'s measured portions when it has them (search_foods lists them). Pass `grams` yourself only when the food has no matching portion or the size is clearly not typical.',
         '',
         'Before creating a recipe, call search_recipes to check it is not already saved; if it is, prefer update_recipe with a change_note.',
+        '',
+        'The kitchen side: list_pantry / save_pantry_items track what the user has, suggest_from_pantry says what that makes cookable (exact arithmetic, done by the app — do not redo it yourself), and the shopping tools cover what is missing. Sorting the shopping list by shop is the one part that needs your web search.',
       ].join('\n'),
     },
   )
@@ -453,6 +472,252 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
 
       const food = await createFood(db, principal.userId, parsed.data)
       return text(`Created food ${foodLabel(food)} [${food.source}]\n${food.id}`)
+    },
+  )
+
+  /* ------------------------------------------------------------------ */
+  /* Pantry                                                              */
+  /* ------------------------------------------------------------------ */
+
+  server.registerTool(
+    'list_pantry',
+    {
+      title: "What is in the user's kitchen",
+      description: [
+        'List what the user currently has, soonest expiry first.',
+        '',
+        'Read this before suggesting what to cook, before adding to the shopping list (never make them buy what they already have), and before saving pantry changes, so you update the right line.',
+      ].join('\n'),
+      inputSchema: {},
+    },
+    async () => {
+      const items = await listPantry(db, principal.userId)
+      if (items.length === 0) return text('Tủ lạnh đang trống (chưa có gì được ghi vào).')
+      return text(
+        items
+          .map((i) => {
+            const amount = i.quantity != null ? `${i.quantity}${i.unit ? ` ${i.unit}` : ''}` : 'có'
+            return `${i.id}  ${i.name}  ${amount}${i.grams != null ? ` (~${round(i.grams)} g)` : ''}${
+              i.expiresOn ? `  HSD ${i.expiresOn}` : ''
+            }${i.note ? `  — ${i.note}` : ''}`
+          })
+          .join('\n'),
+      )
+    },
+  )
+
+  server.registerTool(
+    'save_pantry_items',
+    {
+      title: 'Put things in the kitchen',
+      description: [
+        'Record what the user has just bought, or corrects you about ("tủ còn 5 quả trứng, nửa bó hành").',
+        '',
+        'One row per thing: sending the same name again REPLACES that line, it does not add a second one. Send the amount the user has NOW, not the amount they added.',
+        '',
+        'Write names the way a Vietnamese kitchen says them, without prep words: "thịt ba chỉ", not "thịt ba chỉ thái lát". Link food_id from search_foods when you can — it makes matching against recipes exact.',
+        '',
+        'Always ask for or carry over `expires_on` for fresh things (rau, thịt, sữa); it is what lets the app suggest cooking them before they go off. Omit it for rice, sugar, fish sauce.',
+      ].join('\n'),
+      inputSchema: {
+        items: z.array(
+          z.object({
+            name: z.string().describe('Tên nguyên liệu, ví dụ "trứng gà".'),
+            quantity: z.number().optional().describe('Bỏ trống nếu chỉ biết là "còn".'),
+            unit: z.string().optional().describe('g, kg, ml, quả, củ, bó, hộp…'),
+            expires_on: z.string().optional().describe('Hạn dùng dạng YYYY-MM-DD.'),
+            note: z.string().optional().describe('Ví dụ "ngăn đá", "đã bóc vỏ".'),
+            food_id: z.string().optional().describe('Từ search_foods, nếu có.'),
+          }),
+        ),
+      },
+    },
+    async ({ items }) => {
+      const parsed = z.array(pantryItemInput).safeParse(
+        items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+          expiresOn: i.expires_on,
+          note: i.note,
+          foodId: i.food_id,
+        })),
+      )
+      if (!parsed.success) return text(`Rejected — ${firstIssue(parsed.error)}`)
+
+      const saved = await savePantryItems(db, principal.userId, parsed.data)
+      return text(`Đã ghi ${saved.length} thứ vào tủ.\n${baseUrl}/pantry`)
+    },
+  )
+
+  server.registerTool(
+    'remove_pantry_items',
+    {
+      title: 'Take things out of the kitchen',
+      description: [
+        'Remove pantry lines the user has used up or thrown away. Pass the names they used, or ids from list_pantry.',
+        '',
+        'Cooking does NOT go through this tool — the app asks the user what was used up after they finish a recipe, so they can keep what is left over.',
+      ].join('\n'),
+      inputSchema: {
+        names: z.array(z.string()).optional().describe('Tên như người dùng nói: ["hành lá", "trứng gà"].'),
+        ids: z.array(z.string()).optional().describe('Id từ list_pantry.'),
+      },
+    },
+    async ({ names, ids }) => {
+      const removed = await removePantryItems(db, principal.userId, { names, ids })
+      return text(removed === 0 ? 'Không tìm thấy thứ nào khớp.' : `Đã bỏ ${removed} thứ khỏi tủ.`)
+    },
+  )
+
+  server.registerTool(
+    'suggest_from_pantry',
+    {
+      title: 'What can be cooked with what is in the kitchen',
+      description: [
+        "Match the pantry against the user's own recipes: what is cookable now, and what each one is missing.",
+        '',
+        'The ranking is exact set arithmetic done by the app, not a guess — trust it over your own reading of the pantry, and do not invent recipes the user has not saved. If nothing is close, say so and offer to save a recipe that fits what they have.',
+        '',
+        'Ingredients with no amount ("muối", "vừa ăn") are ignored on purpose; nobody shops for those.',
+      ].join('\n'),
+      inputSchema: {},
+    },
+    async () => {
+      const suggestions = await suggestFromPantry(db, principal.userId)
+      if (suggestions.length === 0) {
+        return text('Chưa gợi ý được: tủ trống, hoặc không công thức nào dùng những thứ đang có.')
+      }
+      return text(
+        suggestions
+          .map((s) => {
+            const missing = s.missing.length
+              ? `thiếu ${s.missing.length}: ${s.missing.map((m) => `${m.name}${m.short ? ' (không đủ)' : ''}`).join(', ')}`
+              : 'đủ nguyên liệu'
+            const expiring = s.usesExpiring.length ? `  · dùng đồ sắp hết hạn: ${s.usesExpiring.join(', ')}` : ''
+            return `${s.recipeId}  ${s.title}  [${s.have}/${s.needed}] ${missing}${expiring}`
+          })
+          .join('\n'),
+      )
+    },
+  )
+
+  /* ------------------------------------------------------------------ */
+  /* Shopping                                                            */
+  /* ------------------------------------------------------------------ */
+
+  server.registerTool(
+    'get_shopping_list',
+    {
+      title: 'Read the shopping list',
+      description: [
+        'The current list, with the shop each line is assigned to and the recipe it came from.',
+        '',
+        'Call this before assign_shopping_stores (you need the item ids) and before adding, to avoid duplicating a line.',
+      ].join('\n'),
+      inputSchema: {},
+    },
+    async () => {
+      const lines = await listShopping(db, principal.userId)
+      if (lines.length === 0) return text('Danh sách đi chợ đang trống.')
+      return text(
+        lines
+          .map((l) => {
+            const amount = l.quantity != null ? `${l.quantity}${l.unit ? ` ${l.unit}` : ''}` : ''
+            const where = l.store ? `[${STORE_LABEL[l.store.kind]} · ${l.store.name}]` : '[chưa phân loại]'
+            return `${l.id}  ${l.name} ${amount}  ${where}${l.boughtAt ? '  (đã mua)' : ''}${
+              l.recipeTitle ? `  ← ${l.recipeTitle}` : ''
+            }`
+          })
+          .join('\n'),
+      )
+    },
+  )
+
+  server.registerTool(
+    'add_to_shopping_list',
+    {
+      title: 'Add to the shopping list',
+      description: [
+        'Add what the user needs to buy. Lines with the same name merge into one, so it is safe to add the missing ingredients of several recipes in a row.',
+        '',
+        'Call list_pantry first: never add something the kitchen already has. suggest_from_pantry already tells you exactly what each recipe is missing — pass those names and amounts through, with recipe_id so the list says why each line is there.',
+      ].join('\n'),
+      inputSchema: {
+        items: z.array(
+          z.object({
+            name: z.string(),
+            quantity: z.number().optional(),
+            unit: z.string().optional(),
+            note: z.string().optional().describe('Ví dụ "loại không đường", "mua con to".'),
+            food_id: z.string().optional(),
+            recipe_id: z.string().optional().describe('Công thức cần món này.'),
+          }),
+        ),
+      },
+    },
+    async ({ items }) => {
+      const parsed = z.array(shoppingItemInput).safeParse(
+        items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+          note: i.note,
+          foodId: i.food_id,
+          recipeId: i.recipe_id,
+        })),
+      )
+      if (!parsed.success) return text(`Rejected — ${firstIssue(parsed.error)}`)
+
+      const { added, merged } = await addShoppingItems(db, principal.userId, parsed.data)
+      return text(`Đã thêm ${added} món, gộp ${merged} món trùng.\n${baseUrl}/shopping`)
+    },
+  )
+
+  server.registerTool(
+    'assign_shopping_stores',
+    {
+      title: 'Sort the shopping list by where to buy it',
+      description: [
+        'Put each line of the list in a shop, so the user walks one route instead of wandering.',
+        '',
+        '**This is the part that needs you.** Use your web search to work it out, in this order:',
+        '1. Put everything a convenience chain reliably stocks at "bhx" (Bách Hóa Xanh) — packaged goods, dairy, eggs, common vegetables, basic meat.',
+        '2. Send the rest to "cho" (the wet market): live/fresh seafood, unusual cuts, herbs by the bunch, anything a chain rarely carries. Chợ is the fallback, not the first choice.',
+        '3. Use "sieu_thi" only for things needing a big supermarket (imported baking goods, cheese) and "online" for what neither carries.',
+        '',
+        'Then search for the nearest real branch and market to the area the user gives you, and pass its `name`, `address` and a `maps_url` (a normal google.com/maps link that opens that place). If the user has not said where they live, ASK before guessing a district — a map link to the wrong side of the city is worse than none.',
+        '',
+        'Only name a branch you actually found in search results. Do not invent an address, and do not fabricate a maps link from a made-up place id — a plain search-style Google Maps URL for the real name and street is fine.',
+      ].join('\n'),
+      inputSchema: {
+        assignments: z.array(
+          z.object({
+            item_ids: z.array(z.string()).describe('Id từ get_shopping_list.'),
+            kind: z.enum(STORE_KINDS).describe('bhx | cho | sieu_thi | online'),
+            store_name: z.string().describe('Tên chi nhánh thật, ví dụ "Bách Hóa Xanh Nguyễn Thị Thập".'),
+            address: z.string().optional(),
+            maps_url: z.string().optional().describe('Link Google Maps mở đúng chỗ đó.'),
+          }),
+        ),
+      },
+    },
+    async ({ assignments }) => {
+      const results: string[] = []
+      for (const assignment of assignments) {
+        const parsed = storeInput.safeParse({
+          kind: assignment.kind,
+          name: assignment.store_name,
+          address: assignment.address,
+          mapsUrl: assignment.maps_url,
+        })
+        if (!parsed.success) return text(`Rejected — ${firstIssue(parsed.error)}`)
+
+        const store = await saveStore(db, principal.userId, parsed.data)
+        const moved = await assignStore(db, principal.userId, assignment.item_ids, store.id)
+        results.push(`${STORE_LABEL[store.kind]} · ${store.name}: ${moved} món`)
+      }
+      return text(`${results.join('\n')}\n\n${baseUrl}/shopping`)
     },
   )
 

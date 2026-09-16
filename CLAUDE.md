@@ -113,12 +113,44 @@ stay stable so recipe links survive a re-import):
 Search (`searchFoods`): all words must match; ranked user foods → name starts
 with the query as whole words → phrase anywhere → has a Vietnamese name → shorter.
 
+## Kitchen: pantry, suggestions, shopping
+
+**The split that defines this feature: the app decides WHAT, Claude decides
+WHERE.** "Which recipes can I cook" is set arithmetic against the pantry
+(`suggestFromPantry`) — exact, instant, free, and it must stay that way; an LLM
+would occasionally invent an ingredient you have. Sorting the shopping list by
+shop needs web search and local knowledge, so it is Claude's, through
+`assign_shopping_stores`. The app never calls a search engine.
+
+- **pantry_items** — one row per thing (unique on `match_key`). Amounts and
+  `expires_on` are optional: "còn hành lá" is a valid entry and still answers
+  "nấu được món này không".
+- **Matching** (`src/lib/match.ts`): `matchKey` strips diacritics, case and
+  *trailing* prep/grade words ("thịt ba chỉ thái lát" → "thit ba chi"); `covers`
+  allows one name to be the other plus a qualifier. Shallow on purpose — "trứng
+  gà" and "trứng vịt" must never collapse.
+- Suggestions ignore optional lines and lines with no amount ("muối, vừa ăn"):
+  nobody shops for those, and counting them makes every recipe look short.
+  Ranking: fewest missing → uses something expiring within 3 days → most
+  recently updated.
+- **stores** — four fixed kinds (`bhx`, `cho`, `sieu_thi`, `online`) so the list
+  groups the same way weekly; branch name, address and Maps URL come from Claude.
+- **shopping_items** — same-name lines merge (amounts add when the unit matches,
+  otherwise the second amount lands in the note). `bought_at` is a soft tick.
+- After cooking, `/recipes/[id]/done` asks before deducting: weighed lines lose
+  grams and keep the remainder, unweighed lines are removed. Never silent.
+
 ## MCP (`src/server/mcp/server.ts`)
 
-Six tools: `search_recipes`, `get_recipe` (optional scaling), `create_recipe`,
-`update_recipe` (full-list replacement, snapshots history), `search_foods`,
-`create_food`. **Descriptions are the prompt** — the product rules (link foods,
-label estimates honestly, credit sources, rewrite steps in own words) live there.
+Thirteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
+`create_recipe`, `update_recipe` (full-list replacement, snapshots history).
+Foods: `search_foods`, `create_food`. Kitchen: `list_pantry`,
+`save_pantry_items`, `remove_pantry_items`, `suggest_from_pantry`,
+`get_shopping_list`, `add_to_shopping_list`, `assign_shopping_stores`.
+
+**Descriptions are the prompt** — the product rules (link foods, label estimates
+honestly, credit sources, rewrite steps in own words, ask where the user lives
+before guessing a district, never invent a branch address) live there.
 
 Deliberately absent: `delete_recipe` (belongs in the app, where it is visible).
 
@@ -164,8 +196,9 @@ own dark screen rather than an inverted theme.
 
 Screens built: `/` home, `/recipes` list, `/recipes/[id]` detail (servings
 stepper scales quantities client-side; per-serving nutrition stays fixed),
-`/recipes/[id]/cook` cook mode, `/recipes/new` (explains that recipes arrive
-via Claude), `/settings`.
+`/recipes/[id]/cook` cook mode, `/recipes/[id]/done` (deduct from the pantry),
+`/pantry`, `/shopping`, `/recipes/new` (explains that recipes arrive via
+Claude), `/settings` (reached from the home card, not the tab bar).
 
 ### Cook mode
 

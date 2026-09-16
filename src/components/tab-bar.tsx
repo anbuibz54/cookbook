@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Bottom navigation, pill-shaped with the playful border and shadow.
+ * Bottom navigation, pill-shaped with the playful border.
  *
- * Three tabs, all of which lead somewhere real — the mockup's "Đi chợ" is not
- * built yet, so Settings (where MCP tokens live) takes the third slot.
+ * Four tabs do not fit as icon + label at phone width, so only the current tab
+ * carries its label — the others stay icons with an accessible name. Settings
+ * is reached from the home screen's card, not from here.
  */
 const TABS = [
   {
@@ -26,12 +27,23 @@ const TABS = [
     ),
   },
   {
-    href: '/settings',
-    label: 'Kết nối AI',
+    href: '/pantry',
+    label: 'Tủ lạnh',
     icon: (
       <>
-        <path d="M12 3v4M12 17v4M4.9 7.5l3.4 2M15.7 14.5l3.4 2M4.9 16.5l3.4-2M15.7 9.5l3.4-2" />
-        <circle cx="12" cy="12" r="3" />
+        <path d="M6 3h12v18H6z" />
+        <path d="M6 10h12" />
+        <path d="M9 6.5v1.5M9 13v2" />
+      </>
+    ),
+  },
+  {
+    href: '/shopping',
+    label: 'Đi chợ',
+    icon: (
+      <>
+        <path d="M4 7h16l-1.5 12H5.5z" />
+        <path d="M9 7a3 3 0 0 1 6 0" />
       </>
     ),
   },
@@ -41,7 +53,7 @@ export function TabBar() {
   const pathname = usePathname()
 
   return (
-    <nav className="sticky bottom-0 z-10 mx-auto flex w-full max-w-md gap-2 rounded-full border-2 border-ink bg-surface p-1.5">
+    <nav className="sticky bottom-0 z-10 mx-auto flex w-full max-w-md gap-1.5 rounded-full border-2 border-ink bg-surface p-1.5">
       {TABS.map((tab) => {
         const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
         return (
@@ -49,8 +61,9 @@ export function TabBar() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? 'page' : undefined}
-            className={`flex h-11 grow items-center justify-center gap-2 rounded-full text-sm font-medium ${
-              active ? 'bg-ink text-background' : 'text-muted'
+            aria-label={tab.label}
+            className={`flex h-11 items-center justify-center gap-2 rounded-full text-sm font-medium ${
+              active ? 'grow bg-ink text-background' : 'w-11 shrink-0 text-muted'
             }`}
           >
             <svg
@@ -63,10 +76,11 @@ export function TabBar() {
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
+              className="shrink-0"
             >
               {tab.icon}
             </svg>
-            {tab.label}
+            {active ? tab.label : null}
           </Link>
         )
       })}
