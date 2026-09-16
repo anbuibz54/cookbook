@@ -142,10 +142,35 @@ Connect Claude Code:
 - The dev machine is short on memory: stop `pnpm dev` when done, and don't run
   it alongside a big import.
 
+## Design (decided 2026-09-16)
+
+Mockups: artifact "Sổ công thức UI" — sources in `design/mockups/*.dc.html`
+(edit those and re-seed with the `design` skill; the assembled `.html` is
+gitignored).
+
+Two voices in one system:
+
+- **Playful** (home, primary buttons, add button): Baloo 2, 2px `ink` borders,
+  offset shadow (`shadow-pop`), colour tiles.
+- **Data-dense** (recipe, list): Lexend body, JetBrains Mono for every digit,
+  white cards with a thin `line` border, gram/kcal table.
+
+Palette "Hồng sữa" — tokens in `globals.css`, used through Tailwind (`bg-surface`,
+`text-muted`, `border-line`, `bg-primary`…): background `#FBF1F0`, surface white,
+ink `#241A1C`, muted `#756468`, line `#E9D9D8`, primary/fat `#D9607E`, protein
+`#4E9E86`, carbs `#E0A93C`. **Protein / fat / carbs must keep distinct hues** —
+the energy bar is only readable by colour. Light mode only; cook mode gets its
+own dark screen rather than an inverted theme.
+
+Screens built: `/` home, `/recipes` list, `/recipes/[id]` detail (servings
+stepper scales quantities client-side; per-serving nutrition stays fixed),
+`/recipes/new` (explains that recipes arrive via Claude), `/settings`.
+
 ## Deferred — do not build yet
 
-- **UI design.** Current pages are deliberately plain placeholders (tokens in
-  `globals.css`); the real design is still to be discussed with the user.
+- **Cook mode** (`/recipes/[id]/cook`): designed in the mockup (dark screen, one
+  step at a time, countdown for that step's timer, keep-awake), not built. The
+  recipe page has no "Nấu thôi" button until it exists.
 - In-app AI (Claude API): paste text/photo → structured recipe, suggestions.
   Wanted, not yet scoped.
 - Video analysis (in-app). Deferred by the user.

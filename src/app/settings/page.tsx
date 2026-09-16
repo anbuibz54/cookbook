@@ -49,7 +49,7 @@ export default async function SettingsPage() {
                     <span className="text-muted">Đã thu hồi</span>
                   ) : (
                     <form action={revokeTokenAction.bind(null, t.id)}>
-                      <button type="submit" className="text-accent hover:underline">
+                      <button type="submit" className="text-primary hover:underline">
                         Thu hồi
                       </button>
                     </form>

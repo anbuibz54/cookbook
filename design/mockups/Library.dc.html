@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Lexend:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF1F0; }
+    a { color: #C2415F; } a:hover { color: #9E3049; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 1000px; background: #FBF1F0; color: #241A1C; font-family: Lexend, system-ui, sans-serif; font-size: 14px; line-height: 1.45; padding: 24px 18px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <h1 style="margin: 0; font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 30px; line-height: 1;">Sổ công thức</h1>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; color: #756468;">24</span>
+    </div>
+    <div style="width: 44px; height: 44px; border-radius: 22px; background: #D9607E; border: 2px solid #241A1C; box-shadow: 3px 3px 0 #241A1C; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px;">
+    <div style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 2px solid #241A1C; display: flex; align-items: center; gap: 10px; padding: 0 16px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#241A1C" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <span style="color: #9A8A8C;">Tìm món, nguyên liệu, tag</span>
+    </div>
+    <div style="height: 48px; border-radius: 999px; background: #FFFFFF; border: 2px solid #241A1C; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#241A1C" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg></div>
+  </div>
+
+  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <span style="height: 36px; padding: 0 14px; border-radius: 999px; background: #241A1C; color: #FFFFFF; display: flex; align-items: center; gap: 6px; font-weight: 500;">Tất cả <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; opacity: 0.7;">24</span></span>
+    <span style="height: 36px; padding: 0 14px; border-radius: 999px; background: #E0A93C; border: 1px solid #241A1C; display: flex; align-items: center; gap: 6px;">Bánh <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px;">9</span></span>
+    <span style="height: 36px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9D9D8; display: flex; align-items: center; gap: 6px;">Món mặn <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #756468;">7</span></span>
+    <span style="height: 36px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9D9D8; display: flex; align-items: center; gap: 6px;">Canh <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #756468;">4</span></span>
+    <span style="height: 36px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9D9D8; display: flex; align-items: center; gap: 6px;">Chè <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #756468;">4</span></span>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; font-size: 12px; color: #756468; padding: 0 6px;">
+    <span>Mới cập nhật</span>
+    <span style="display: flex; gap: 24px;"><span>Thời gian</span><span>kcal/phần</span></span>
+  </div>
+
+  <div style="background: #FFFFFF; border: 1px solid #E9D9D8; border-radius: 18px; padding: 4px 14px; display: flex; flex-direction: column;">
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #F3E7E6;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #E4CFA4;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Bông lan trứng muối</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #E0A93C;"></span>bánh · AI soạn</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">1:25</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">324</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #F3E7E6;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #D9B08A;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Phở bò Hà Nội</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #4E9E86;"></span>món nước</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">4:00</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">450</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #F3E7E6;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #F2D68C;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Bánh flan caramel</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #4E9E86;"></span>bánh</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">1:10</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">198</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #F3E7E6;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #C99670;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Gà kho gừng</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #4E9E86;"></span>món mặn</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">0:40</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">285</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid #F3E7E6;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #D9A35B;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Canh chua cá lóc</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #E0A93C;"></span>canh</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">0:35</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">160</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 50px 44px; gap: 10px; align-items: center; padding: 11px 0;">
+      <div style="width: 48px; height: 48px; border-radius: 12px; background: #E8DCC8;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-weight: 500;">Chè khúc bạch</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #756468;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #4E9E86;"></span>chè</span></div>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">0:50</span>
+      <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; text-align: right;">230</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 16px; font-size: 12px; color: #756468; padding: 0 6px;">
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #4E9E86;"></span>Đủ số liệu dinh dưỡng</span>
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #E0A93C;"></span>Còn thiếu</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

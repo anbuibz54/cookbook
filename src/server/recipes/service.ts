@@ -12,14 +12,14 @@
  * No `next/*` imports.
  */
 
-import { and, arrayContains, asc, desc, eq, ilike } from 'drizzle-orm'
+import { and, arrayContains, asc, desc, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from '../db'
 import { foods, recipeIngredients, recipeSteps, recipeVersions, recipes } from '../db/schema'
 import { foodsByIds, likePattern } from '../foods/service'
 import { normalizeForSearch } from '@/lib/text'
 import { canonicalUnit, gramsFor } from '@/lib/units'
-import { computeNutrition, type RecipeNutrition } from '@/lib/nutrition'
+import { computeNutrition, type NutritionLine, type RecipeNutrition } from '@/lib/nutrition'
 
 /* -------------------------------------------------------------------------- */
 /* Input                                                                       */
@@ -165,6 +165,70 @@ export async function listRecipes(
     .where(and(...conditions))
     .orderBy(desc(recipes.updatedAt))
     .limit(limit)
+}
+
+export type RecipeSummary = RecipeRow & {
+  nutrition: RecipeNutrition
+  totalMinutes: number | null
+}
+
+/**
+ * Recipes with nutrition, for lists. Ingredients for the whole page are
+ * fetched in ONE query and grouped in memory — a per-recipe `getRecipe` would
+ * be a query per row, which is how a list page starts hanging.
+ */
+export async function listRecipeSummaries(
+  db: Db,
+  userId: string,
+  options: { search?: string; tag?: string; limit?: number } = {},
+): Promise<RecipeSummary[]> {
+  const rows = await listRecipes(db, userId, options)
+  if (rows.length === 0) return []
+
+  const lines = await db
+    .select({ line: recipeIngredients, food: foods })
+    .from(recipeIngredients)
+    .leftJoin(foods, eq(recipeIngredients.foodId, foods.id))
+    .where(inArray(recipeIngredients.recipeId, rows.map((r) => r.id)))
+
+  const byRecipe = new Map<string, NutritionLine[]>()
+  for (const { line, food } of lines) {
+    const list = byRecipe.get(line.recipeId) ?? []
+    list.push({
+      name: line.name,
+      optional: line.optional,
+      grams: line.grams,
+      gramsSource: line.gramsSource,
+      food,
+    })
+    byRecipe.set(line.recipeId, list)
+  }
+
+  return rows.map((recipe) => ({
+    ...recipe,
+    nutrition: computeNutrition(byRecipe.get(recipe.id) ?? [], recipe.servings),
+    totalMinutes:
+      recipe.prepMinutes == null && recipe.cookMinutes == null
+        ? null
+        : (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0),
+  }))
+}
+
+/** How many recipes carry each tag, most used first. Drives the home screen's tiles. */
+export async function tagCounts(
+  db: Db,
+  userId: string,
+  limit = 4,
+): Promise<{ tag: string; count: number }[]> {
+  const rows = await db
+    .select({ tag: sql<string>`tag`, count: sql<number>`count(*)::int` })
+    .from(sql`${recipes}, unnest(${recipes.tags}) as tag`)
+    .where(eq(recipes.userId, userId))
+    .groupBy(sql`tag`)
+    .orderBy(sql`count(*) desc`, sql`tag`)
+    .limit(limit)
+
+  return rows.map((r) => ({ tag: r.tag, count: Number(r.count) }))
 }
 
 /* -------------------------------------------------------------------------- */

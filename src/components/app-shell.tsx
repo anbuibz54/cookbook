@@ -1,25 +1,23 @@
 import Link from 'next/link'
 import { signOut } from '@/app/(auth)/actions'
+import { TabBar } from '@/components/tab-bar'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-3xl px-5 pb-20">
-      <header className="flex items-center justify-between gap-4 py-5">
-        <Link href="/" className="text-lg font-semibold">
-          Cookbook
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-[18px] pt-6 pb-6">
+      <header className="flex items-center justify-between gap-4">
+        <Link href="/" className="font-display text-[30px] leading-none font-extrabold">
+          Sổ công thức
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-muted">
-          <Link href="/settings" className="hover:text-foreground">
-            Kết nối AI
-          </Link>
-          <form action={signOut}>
-            <button type="submit" className="hover:text-foreground">
-              Đăng xuất
-            </button>
-          </form>
-        </nav>
+        <form action={signOut}>
+          <button type="submit" className="text-sm text-muted hover:text-ink">
+            Đăng xuất
+          </button>
+        </form>
       </header>
       {children}
+      <div className="grow" />
+      <TabBar />
     </div>
   )
 }

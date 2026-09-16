@@ -15,18 +15,18 @@ export function MintTokenForm({ endpoint }: { endpoint: string }) {
           id="token-name"
           name="name"
           placeholder="Tên, ví dụ: claude laptop"
-          className="min-w-0 flex-1 rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-accent"
+          className="min-w-0 flex-1 rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-primary"
         />
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-foreground px-4 py-2 font-medium text-background disabled:opacity-60"
+          className="rounded-md bg-ink px-4 py-2 font-medium text-background disabled:opacity-60"
         >
           Tạo token
         </button>
       </form>
 
-      {state.error ? <p role="alert" className="text-sm text-accent">{state.error}</p> : null}
+      {state.error ? <p role="alert" className="text-sm text-primary">{state.error}</p> : null}
 
       {state.token ? (
         <div className="space-y-2 rounded-lg border border-line bg-surface p-4 text-sm">

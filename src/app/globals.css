@@ -1,43 +1,71 @@
 @import "tailwindcss";
 
 /*
- * Placeholder tokens. The cookbook's real visual design is still to be
- * decided — keep styling in these variables so the redesign is one file.
+ * Bảng màu "Hồng sữa" — chốt 16/09/2026, xem mockup "Sổ công thức UI".
+ *
+ * Hai giọng trong cùng một bộ token:
+ *  - Vui nhộn (trang chủ, nút chính): viền `ink` 2px + bóng đổ lệch, ô màu.
+ *  - Nhiều số liệu (công thức): thẻ trắng viền mảnh, số bằng font mono.
+ *
+ * Đạm / béo / tinh bột phải luôn khác hẳn hue: thanh năng lượng chỉ đọc được
+ * nhờ màu. Đừng đổi ba màu này về cùng một tông.
+ *
+ * Chỉ có chế độ sáng. Thiết kế dựa trên nền hồng nhạt; bản tối (chế độ nấu)
+ * là màn riêng, không phải đảo màu toàn app.
  */
 :root {
-  --background: #f7f6f2;
+  --background: #fbf1f0;
   --surface: #ffffff;
-  --foreground: #23201b;
-  --muted: #6b645a;
-  --line: #e4dfd5;
-  --accent: #b5542f;
-  --accent-soft: #f5e3da;
-}
+  --ink: #241a1c;
+  --muted: #756468;
+  --line: #e9d9d8;
+  --line-soft: #f3e7e6;
+  --placeholder: #9a8a8c;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #171512;
-    --surface: #211e1a;
-    --foreground: #ede8df;
-    --muted: #a59d90;
-    --line: #36312a;
-    --accent: #e48a63;
-    --accent-soft: #3a261d;
-  }
+  --primary: #d9607e;
+  --protein: #4e9e86;
+  --fat: #d9607e;
+  --carbs: #e0a93c;
+
+  --tile-pink: #f6c9d2;
+  --tile-mint: #bfe0d2;
+
+  --warn-bg: #fbebd6;
+  --warn-ink: #8a5c15;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
-  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --font-sans: var(--font-be-vietnam), system-ui, sans-serif;
+  --color-line-soft: var(--line-soft);
+  --color-placeholder: var(--placeholder);
+  --color-primary: var(--primary);
+  --color-protein: var(--protein);
+  --color-fat: var(--fat);
+  --color-carbs: var(--carbs);
+  --color-tile-pink: var(--tile-pink);
+  --color-tile-mint: var(--tile-mint);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-ink: var(--warn-ink);
+
+  --font-display: var(--font-baloo), system-ui, sans-serif;
+  --font-sans: var(--font-lexend), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Bóng đổ lệch của các phần tử "vui nhộn". */
+  --shadow-pop: 4px 4px 0 var(--ink);
+  --shadow-pop-sm: 3px 3px 0 var(--ink);
+  --shadow-pop-primary: 4px 4px 0 var(--primary);
+}
+
+html {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--ink);
 }

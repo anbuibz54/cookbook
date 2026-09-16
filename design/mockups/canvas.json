@@ -1,0 +1,60 @@
+{
+  "pages": [
+    { "id": "page-3", "name": "Bảng màu" },
+    { "id": "page-1", "name": "Thiết kế chọn" },
+    { "id": "page-2", "name": "Ba hướng ban đầu" }
+  ],
+  "artboards": [
+    { "file": "PaletteHong.dc.html", "title": "Hồng sữa", "page": "page-3", "x": 0, "y": 0, "w": 440, "h": 900 },
+    { "file": "PaletteLa.dc.html", "title": "Lá non", "page": "page-3", "x": 540, "y": 0, "w": 440, "h": 900 },
+    { "file": "PaletteHongLa.dc.html", "title": "Hồng lá", "page": "page-3", "x": 1080, "y": 0, "w": 440, "h": 900 },
+    { "file": "PaletteKem.dc.html", "title": "Kem cam (hiện tại)", "page": "page-3", "x": 1620, "y": 0, "w": 440, "h": 900 },
+
+    { "file": "Home.dc.html", "title": "Trang chủ", "page": "page-1", "x": 0, "y": 0, "w": 390, "h": 1260 },
+    { "file": "Main.dc.html", "title": "Công thức", "page": "page-1", "x": 470, "y": 0, "w": 390, "h": 2150 },
+    { "file": "CookMode.dc.html", "title": "Chế độ nấu", "page": "page-1", "x": 940, "y": 0, "w": 390, "h": 844 },
+    { "file": "Library.dc.html", "title": "Sổ công thức", "page": "page-1", "x": 1410, "y": 0, "w": 390, "h": 1020 },
+
+    { "file": "SotayLibrary.dc.html", "title": "Sổ tay · Thư viện", "page": "page-2", "x": 0, "y": 0, "w": 390, "h": 1180 },
+    { "file": "SotayRecipe.dc.html", "title": "Sổ tay · Công thức", "page": "page-2", "x": 470, "y": 0, "w": 390, "h": 2400 },
+    { "file": "BepsoLibrary.dc.html", "title": "Bếp số · Thư viện", "page": "page-2", "x": 1060, "y": 0, "w": 390, "h": 900 },
+    { "file": "BepsoRecipe.dc.html", "title": "Bếp số · Công thức", "page": "page-2", "x": 1530, "y": 0, "w": 390, "h": 2000 },
+    { "file": "HopTheLibrary.dc.html", "title": "Hộp thẻ · Thư viện", "page": "page-2", "x": 2120, "y": 0, "w": 390, "h": 1080 },
+    { "file": "HopTheRecipe.dc.html", "title": "Hộp thẻ · Công thức", "page": "page-2", "x": 2590, "y": 0, "w": 390, "h": 2750 }
+  ],
+  "annotations": [
+    {
+      "id": "mau",
+      "page": "page-3",
+      "x": 0,
+      "y": -250,
+      "w": 980,
+      "text": "Bốn bảng màu, cùng bố cục và cùng kiểu chữ, chỉ khác màu.\nMàu đạm, béo, tinh bột phải khác hẳn nhau để nhìn thanh năng lượng là phân biệt được, nên bảng nào cũng cần ba màu tách bạch chứ không thể toàn hồng hoặc toàn xanh.\nChọn một bảng là tui thay cho cả bốn màn hình. Nếu muốn nhạt hơn, đậm hơn, hay đổi riêng một màu nào, cứ nói."
+    },
+    {
+      "id": "he-thong",
+      "page": "page-1",
+      "x": 0,
+      "y": -300,
+      "w": 900,
+      "text": "Trộn hai hướng bạn chọn.\nChất Hộp thẻ dùng cho trang chủ và những nút chính: tiêu đề Baloo 2, viền đậm 2px, bóng đổ lệch, ô danh mục màu, nút tròn to.\nChất Bếp số dùng cho phần công thức: chữ Lexend, số bằng JetBrains Mono, thẻ trắng viền mảnh, bảng gram và kcal, thanh chia năng lượng.\nMàu chung: nền kem #F4F2EC, mực #171A17, cam #E2714F cho béo và hẹn giờ, xanh #4DB38A cho đạm và AI, vàng #ECB63C cho tinh bột và cảnh báo thiếu số liệu."
+    },
+    {
+      "id": "man-hinh",
+      "page": "page-1",
+      "x": 940,
+      "y": -300,
+      "w": 860,
+      "text": "Chế độ nấu là màn mới, chưa có trong ba hướng trước: nền tối cho bếp thiếu sáng, chữ to đọc từ xa, đồng hồ đếm ngược của đúng bước đang làm, nút bước tiếp theo to để bấm khi tay dính bột.\nTab Đi chợ ở trang chủ mới là chỗ giữ sẵn, chưa thiết kế, nói tui biết nếu bạn muốn bỏ hoặc đổi."
+    },
+    {
+      "id": "goc",
+      "page": "page-2",
+      "x": 0,
+      "y": -220,
+      "w": 900,
+      "text": "Ba hướng phác ban đầu, giữ lại để đối chiếu. Bạn đã chọn giữ chất Bếp số cho công thức và chất Hộp thẻ cho trang chủ."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

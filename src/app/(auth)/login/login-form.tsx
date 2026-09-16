@@ -20,7 +20,7 @@ export function LoginForm({ next }: { next?: string }) {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-accent"
+          className="w-full rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-primary"
         />
       </label>
 
@@ -32,12 +32,12 @@ export function LoginForm({ next }: { next?: string }) {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-accent"
+          className="w-full rounded-md border border-line bg-surface px-3 py-2 outline-none focus-visible:border-primary"
         />
       </label>
 
       {state.error ? (
-        <p role="alert" className="text-sm text-accent">
+        <p role="alert" className="text-sm text-primary">
           {state.error}
         </p>
       ) : null}
@@ -45,7 +45,7 @@ export function LoginForm({ next }: { next?: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-foreground px-3 py-2 font-medium text-background disabled:opacity-60"
+        className="w-full rounded-md bg-ink px-3 py-2 font-medium text-background disabled:opacity-60"
       >
         {pending ? 'Đang đăng nhập…' : 'Đăng nhập'}
       </button>

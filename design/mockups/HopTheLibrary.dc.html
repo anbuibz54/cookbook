@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF1D6; }
+    a { color: #C4512F; } a:hover { color: #9E3F23; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 1180px; background: #FBF1D6; color: #2B2320; font-family: Nunito, system-ui, sans-serif; font-size: 16px; line-height: 1.45; padding: 24px 18px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 style="margin: 0; font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 34px; line-height: 1.05;">Hôm nay nấu gì?</h1>
+    <div style="width: 48px; height: 48px; border-radius: 24px; background: #E2714F; border: 2px solid #2B2320; box-shadow: 3px 3px 0 #2B2320; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFDF7" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+  </div>
+
+  <div style="height: 52px; border-radius: 999px; background: #FFFDF7; border: 2px solid #2B2320; display: flex; align-items: center; gap: 10px; padding: 0 18px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2320" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    <span style="color: #9A8D84; font-weight: 600;">Tìm món hoặc nguyên liệu có sẵn</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+    <div style="height: 88px; border-radius: 18px; background: #F6C94C; border: 2px solid #2B2320; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;"><span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px; line-height: 1;">Bánh</span><span style="font-weight: 700; font-size: 14px;">9 công thức</span></div>
+    <div style="height: 88px; border-radius: 18px; background: #E2714F; color: #FFFDF7; border: 2px solid #2B2320; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;"><span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px; line-height: 1;">Món mặn</span><span style="font-weight: 700; font-size: 14px;">7 công thức</span></div>
+    <div style="height: 88px; border-radius: 18px; background: #4DB38A; color: #FFFDF7; border: 2px solid #2B2320; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;"><span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px; line-height: 1;">Canh</span><span style="font-weight: 700; font-size: 14px;">4 công thức</span></div>
+    <div style="height: 88px; border-radius: 18px; background: #FFFDF7; border: 2px solid #2B2320; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;"><span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 20px; line-height: 1;">Chè</span><span style="font-weight: 700; font-size: 14px;">4 công thức</span></div>
+  </div>
+
+  <h2 style="margin: 6px 0 0; font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 24px;">Mới lưu gần đây</h2>
+
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="background: #FFFDF7; border: 2px solid #2B2320; border-radius: 18px; box-shadow: 4px 4px 0 #2B2320; padding: 10px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: center;">
+      <div style="width: 84px; height: 84px; border-radius: 12px; background: #EFD29A;"></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 19px; line-height: 1.1;">Bông lan trứng muối</span>
+        <span style="font-size: 14px; color: #6B5D55; font-weight: 600;">1 giờ 25 · 324 kcal</span>
+        <span style="align-self: flex-start; font-size: 12px; font-weight: 800; background: #4DB38A; color: #FFFDF7; padding: 1px 8px; border-radius: 999px;">AI soạn từ video</span>
+      </div>
+    </div>
+    <div style="background: #FFFDF7; border: 2px solid #2B2320; border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: center;">
+      <div style="width: 84px; height: 84px; border-radius: 12px; background: #D9B08A;"></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 19px; line-height: 1.1;">Phở bò Hà Nội</span>
+        <span style="font-size: 14px; color: #6B5D55; font-weight: 600;">4 giờ · 450 kcal</span>
+      </div>
+    </div>
+    <div style="background: #FFFDF7; border: 2px solid #2B2320; border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: center;">
+      <div style="width: 84px; height: 84px; border-radius: 12px; background: #F2D68C;"></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 19px; line-height: 1.1;">Bánh flan caramel</span>
+        <span style="font-size: 14px; color: #6B5D55; font-weight: 600;">1 giờ 10 · 198 kcal</span>
+      </div>
+    </div>
+    <div style="background: #FFFDF7; border: 2px solid #2B2320; border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: center;">
+      <div style="width: 84px; height: 84px; border-radius: 12px; background: #C99670;"></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 19px; line-height: 1.1;">Gà kho gừng</span>
+        <span style="font-size: 14px; color: #6B5D55; font-weight: 600;">40 phút · 285 kcal</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

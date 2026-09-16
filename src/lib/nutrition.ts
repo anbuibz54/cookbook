@@ -110,6 +110,26 @@ export function computeNutrition(lines: NutritionLine[], servings: number): Reci
   return { total, perServing, servings: s, counted, countable, missing, confidence }
 }
 
+/** kcal contributed by one ingredient line, or null when it cannot be known. */
+export function lineKcal(line: Pick<NutritionLine, 'grams' | 'food'>): number | null {
+  if (!line.food || line.grams == null) return null
+  return (line.food.kcal * line.grams) / 100
+}
+
+/**
+ * Share of the energy each macro provides, using Atwater factors (4/9/4).
+ * Rounded to whole percent and forced to add up to 100 so the bar has no gap.
+ */
+export function energyShare(total: Pick<NutrientTotals, 'proteinG' | 'fatG' | 'carbsG'>) {
+  const parts = [total.proteinG * 4, total.fatG * 9, total.carbsG * 4]
+  const sum = parts.reduce((a, b) => a + b, 0)
+  if (sum <= 0) return { proteinPct: 0, fatPct: 0, carbsPct: 0 }
+
+  const proteinPct = Math.round((parts[0] / sum) * 100)
+  const fatPct = Math.round((parts[1] / sum) * 100)
+  return { proteinPct, fatPct, carbsPct: 100 - proteinPct - fatPct }
+}
+
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {
   good: 'Số liệu tốt',
   approximate: 'Ước lượng',
