@@ -190,6 +190,18 @@ export default async function RecipePage({ params }: PageProps<'/recipes/[id]'>)
         </ol>
       </section>
 
+      {steps.length > 0 ? (
+        <Link
+          href={`/recipes/${recipe.id}/cook`}
+          className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-ink bg-ink font-display text-[19px] font-extrabold text-background shadow-pop-primary"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5l11 7-11 7z" />
+          </svg>
+          Nấu thôi
+        </Link>
+      ) : null}
+
       {recipe.notes ? (
         <section className="flex flex-col gap-2 rounded-[18px] border border-line bg-surface p-4">
           <h2 className="font-display text-[19px] font-bold">Ghi chú</h2>

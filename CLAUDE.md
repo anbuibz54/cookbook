@@ -164,13 +164,27 @@ own dark screen rather than an inverted theme.
 
 Screens built: `/` home, `/recipes` list, `/recipes/[id]` detail (servings
 stepper scales quantities client-side; per-serving nutrition stays fixed),
-`/recipes/new` (explains that recipes arrive via Claude), `/settings`.
+`/recipes/[id]/cook` cook mode, `/recipes/new` (explains that recipes arrive
+via Claude), `/settings`.
+
+### Cook mode
+
+Its own dark screen (`--cook-*` tokens), not an inverted theme. Three things
+that are easy to get wrong and are already decided:
+
+- The countdown stores a **deadline**, not a decremented counter: phones
+  throttle timers when the screen dims, and a counter drifts silently.
+- The timer is `<StepTimer key={step.id}>`, so changing step remounts a fresh
+  stopped timer instead of resetting state in an effect.
+- Wake Lock is re-requested on `visibilitychange` (the lock dies when the page
+  hides) and the "màn hình luôn sáng" line only shows when a lock is held.
+
+"Nguyên liệu nhắc trong bước này" is matched from the step's text
+(`src/lib/cook.ts`) — steps are not linked to ingredients in the schema.
+**Conservative on purpose: a missing line is fine, a wrong one is not.**
+`pnpm check:cook` locks that behaviour in, including two accepted misses.
 
 ## Deferred — do not build yet
-
-- **Cook mode** (`/recipes/[id]/cook`): designed in the mockup (dark screen, one
-  step at a time, countdown for that step's timer, keep-awake), not built. The
-  recipe page has no "Nấu thôi" button until it exists.
 - In-app AI (Claude API): paste text/photo → structured recipe, suggestions.
   Wanted, not yet scoped.
 - Video analysis (in-app). Deferred by the user.

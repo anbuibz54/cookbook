@@ -32,6 +32,17 @@
 
   --warn-bg: #fbebd6;
   --warn-ink: #8a5c15;
+
+  /*
+   * Chế độ nấu là màn tối riêng, không phải bản đảo màu của app: bếp thiếu
+   * sáng, tay bận, nhìn từ xa. Vẫn ngả hồng để cùng một nhà với phần còn lại.
+   */
+  --cook-bg: #241a1c;
+  --cook-surface: #332528;
+  --cook-line: #433336;
+  --cook-ink: #fbf1f0;
+  --cook-muted: #a99a9d;
+  --cook-faint: #7e7073;
 }
 
 @theme inline {
@@ -50,6 +61,12 @@
   --color-tile-mint: var(--tile-mint);
   --color-warn-bg: var(--warn-bg);
   --color-warn-ink: var(--warn-ink);
+  --color-cook-bg: var(--cook-bg);
+  --color-cook-surface: var(--cook-surface);
+  --color-cook-line: var(--cook-line);
+  --color-cook-ink: var(--cook-ink);
+  --color-cook-muted: var(--cook-muted);
+  --color-cook-faint: var(--cook-faint);
 
   --font-display: var(--font-baloo), system-ui, sans-serif;
   --font-sans: var(--font-lexend), system-ui, sans-serif;
