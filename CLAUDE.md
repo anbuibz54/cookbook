@@ -144,6 +144,15 @@ shop needs web search and local knowledge, so it is Claude's, through
   groups the same way weekly; branch name, address and Maps URL come from Claude.
 - **shopping_items** — same-name lines merge (amounts add when the unit matches,
   otherwise the second amount lands in the note). `bought_at` is a soft tick.
+- **By hand, no AI needed** (added 2026-09-17 after the user found the pantry
+  and shopping list were Claude-only): "Thêm đồ vào tủ" / "Thêm món cần mua"
+  forms and tap-to-edit rows. Same free-text amount box as the meal log.
+  Adding an item already in the pantry adds up when the units match. A typed
+  name is linked to a food only on an exact Vietnamese name/alias match
+  (`exactFood`), never a fuzzy one. The shop picker offers the user's stores
+  plus plain kinds ("Bách Hóa Xanh" with no branch), created on first use.
+  Edited rows are keyed by their values so the editor closes onto fresh data.
+  Writing still needs a network connection; there is no offline queue.
 - After cooking, the pantry is updated by logging the meal (see Journal).
   `/recipes/[id]/done` only redirects to `/log?recipe=<id>` now.
 

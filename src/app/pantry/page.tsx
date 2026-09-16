@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { PageTransition } from '@/components/page-transition'
-import { addMissingToShoppingAction, removePantryItemAction } from '@/app/_actions/kitchen'
+import { addMissingToShoppingAction } from '@/app/_actions/kitchen'
 import { requireUser } from '@/lib/auth/dal'
 import { formatQuantity } from '@/lib/units'
 import { db } from '@/server/db'
 import { listPantry, suggestFromPantry } from '@/server/pantry/service'
+import { vnDate } from '@/lib/dates'
+import { PantryAddForm, PantryItemRow } from './pantry-editor'
 
 /** Days at which a date starts being worth shouting about. */
 const SOON = 3
@@ -36,56 +38,29 @@ export default async function PantryPage() {
           <span className="font-mono text-sm text-muted">{items.length}</span>
         </header>
 
+        <PantryAddForm today={vnDate()} />
+
         {items.length === 0 ? (
           <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">
-            Chưa ghi gì trong tủ. Nói với Claude “tủ còn 5 quả trứng, nửa bó hành, 300g thịt ba chỉ, sữa
-            tươi hạn 20/9” là xong.
+            Chưa ghi gì trong tủ. Bấm “Thêm đồ vào tủ”, hoặc nói với Claude “tủ còn 5 quả trứng, nửa bó hành,
+            300g thịt ba chỉ, sữa tươi hạn 20/9”.
           </p>
         ) : (
           <ul className="rounded-[18px] border border-line bg-surface px-3.5">
-            {items.map((item, i) => {
-              const due = expiry(item.expiresOn)
-              return (
-                <li
-                  key={item.id}
-                  className={`flex items-center justify-between gap-3 py-3 ${
-                    i > 0 ? 'border-t border-line-soft' : ''
-                  }`}
-                >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate font-medium">{item.name}</span>
-                    <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                      <span className="font-mono">
-                        {item.quantity != null
-                          ? `${formatQuantity(item.quantity)}${item.unit ? ` ${item.unit}` : ''}`
-                          : 'còn'}
-                      </span>
-                      {due ? (
-                        <span
-                          className={`rounded-full px-2 py-px ${
-                            due.urgent ? 'bg-primary text-white' : 'bg-warn-bg text-warn-ink'
-                          }`}
-                        >
-                          {due.label}
-                        </span>
-                      ) : null}
-                      {item.note ? <span className="truncate">{item.note}</span> : null}
-                    </span>
-                  </div>
-                  <form action={removePantryItemAction.bind(null, item.id)}>
-                    <button
-                      type="submit"
-                      aria-label={`Bỏ ${item.name} khỏi tủ`}
-                      className="flex size-11 items-center justify-center rounded-full text-muted hover:text-primary"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-                        <path d="M6 6l12 12M18 6L6 18" />
-                      </svg>
-                    </button>
-                  </form>
-                </li>
-              )
-            })}
+            {items.map((item, i) => (
+              <PantryItemRow
+                key={`${item.id}:${item.quantity}:${item.unit}:${item.expiresOn}`}
+                first={i === 0}
+                item={{
+                  id: item.id,
+                  name: item.name,
+                  amount: item.quantity != null ? `${formatQuantity(item.quantity)}${item.unit ? ` ${item.unit}` : ''}` : '',
+                  expiresOn: item.expiresOn,
+                  expiry: expiry(item.expiresOn),
+                  note: item.note,
+                }}
+              />
+            ))}
           </ul>
         )}
 

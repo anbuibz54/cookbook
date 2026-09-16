@@ -211,3 +211,58 @@ export async function assignStore(
     .returning({ id: shoppingItems.id })
   return rows.length
 }
+
+/**
+ * Change a line by hand: its amount, and where it is bought. `storeId` null
+ * moves it back to "Chưa phân loại". The store must be the user's.
+ */
+export async function updateShoppingItem(
+  db: Db,
+  userId: string,
+  itemId: string,
+  edit: { quantity: number | null; unit: string | null; note: string | null; storeId: string | null },
+): Promise<boolean> {
+  if (edit.storeId) {
+    const [own] = await db
+      .select({ id: stores.id })
+      .from(stores)
+      .where(and(eq(stores.id, edit.storeId), eq(stores.userId, userId)))
+    if (!own) return false
+  }
+  const [item] = await db
+    .select()
+    .from(shoppingItems)
+    .where(and(eq(shoppingItems.id, itemId), eq(shoppingItems.userId, userId)))
+  if (!item) return false
+
+  const linked = item.foodId ? await foodsByIds(db, userId, [item.foodId]) : new Map()
+  const grams = gramsFor(edit.quantity, null, edit.unit, item.foodId ? linked.get(item.foodId) : undefined)
+  await db
+    .update(shoppingItems)
+    .set({
+      quantity: edit.quantity,
+      unit: canonicalUnit(edit.unit),
+      grams: grams?.grams ?? null,
+      note: edit.note,
+      storeId: edit.storeId,
+    })
+    .where(eq(shoppingItems.id, item.id))
+  return true
+}
+
+/**
+ * A store picked in the app: an existing one by id, or a plain kind ("Bách
+ * Hóa Xanh" with no branch yet), created on first use. Claude can later
+ * replace it with a real branch and address.
+ */
+export async function storeFromChoice(db: Db, userId: string, choice: string | null): Promise<string | null> {
+  if (!choice) return null
+  if (choice.startsWith('kind:')) {
+    const kind = choice.slice(5)
+    if (!STORE_KINDS.includes(kind as StoreKind)) return null
+    const store = await saveStore(db, userId, { kind: kind as StoreKind, name: STORE_LABEL[kind as StoreKind] })
+    return store.id
+  }
+  if (choice.startsWith('store:')) return choice.slice(6)
+  return null
+}

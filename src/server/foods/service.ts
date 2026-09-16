@@ -154,3 +154,20 @@ export function foodLabel(f: Pick<Food, 'nameVi' | 'nameEn'>): string {
   if (f.nameVi && f.nameEn) return `${f.nameVi} (${f.nameEn})`
   return f.nameVi ?? f.nameEn ?? 'Không tên'
 }
+
+/**
+ * The food a typed name unambiguously means, or null. For hand-entered
+ * pantry and shopping lines, where nobody picks from a search list: only an
+ * exact Vietnamese name or alias counts, so "hành" never quietly becomes
+ * "hành tây". The link only adds grams; a missing link loses nothing else.
+ */
+export async function exactFood(db: Db, userId: string, name: string): Promise<FoodWithPortions | null> {
+  const key = normalizeForSearch(name)
+  if (!key) return null
+  const hits = await searchFoods(db, userId, { query: name, limit: 5 })
+  return (
+    hits.find(
+      (f) => normalizeForSearch(f.nameVi) === key || f.aliases.some((a) => normalizeForSearch(a) === key),
+    ) ?? null
+  )
+}

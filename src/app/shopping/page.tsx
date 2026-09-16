@@ -1,13 +1,10 @@
-import {
-  clearBoughtAction,
-  removeShoppingItemAction,
-  setBoughtAction,
-} from '@/app/_actions/kitchen'
+import { clearBoughtAction, setBoughtAction } from '@/app/_actions/kitchen'
+import { ShoppingAddForm, ShoppingLineRow, type StoreChoice } from './shopping-editor'
 import { PageTransition } from '@/components/page-transition'
 import { requireUser } from '@/lib/auth/dal'
 import { formatQuantity } from '@/lib/units'
 import { db } from '@/server/db'
-import { listShopping, STORE_KINDS, STORE_LABEL, type ShoppingLine } from '@/server/shopping/service'
+import { listShopping, listStores, STORE_KINDS, STORE_LABEL, type ShoppingLine } from '@/server/shopping/service'
 
 const KIND_STYLE: Record<string, string> = {
   bhx: 'bg-protein text-white',
@@ -59,7 +56,17 @@ function groupByStore(lines: ShoppingLine[]): Group[] {
 
 export default async function ShoppingPage() {
   const { user } = await requireUser()
-  const lines = await listShopping(db, user.id)
+  const [lines, stores] = await Promise.all([listShopping(db, user.id), listStores(db, user.id)])
+  // Real branches first (from Claude or earlier picks), then a plain kind for
+  // each kind that has no store yet.
+  const choices: StoreChoice[] = [
+    ...[...stores]
+      .sort((a, b) => STORE_KINDS.indexOf(a.kind) - STORE_KINDS.indexOf(b.kind))
+      .map((st) => ({ value: `store:${st.id}`, label: storeTitle(st.kind, st.name) })),
+    ...STORE_KINDS.filter((kind) => !stores.some((st) => st.kind === kind && st.name === STORE_LABEL[kind])).map(
+      (kind) => ({ value: `kind:${kind}`, label: STORE_LABEL[kind] }),
+    ),
+  ]
   const open = lines.filter((l) => l.boughtAt == null)
   const bought = lines.filter((l) => l.boughtAt != null)
   const groups = groupByStore(open)
@@ -75,18 +82,19 @@ export default async function ShoppingPage() {
           </span>
         </header>
 
+        <ShoppingAddForm choices={choices} />
+
         {open.length === 0 && bought.length === 0 ? (
           <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">
-            Danh sách trống. Vào Tủ lạnh bấm “thêm món thiếu vào đi chợ”, hoặc nói với Claude “thêm
-            trứng với sữa vào danh sách đi chợ”.
+            Danh sách trống. Bấm “Thêm món cần mua”, vào Tủ lạnh bấm “thêm món thiếu vào đi chợ”, hoặc nói
+            với Claude “thêm trứng với sữa vào danh sách đi chợ”.
           </p>
         ) : null}
 
         {unsorted > 0 ? (
           <p className="rounded-[18px] border-2 border-ink bg-warn-bg px-4 py-3 text-[13px] text-pretty text-warn-ink">
-            {unsorted} món chưa biết mua ở đâu. Nói với Claude “phân loại danh sách đi chợ, tui ở
-            [quận/khu vực]” — Claude tra xem món nào Bách Hóa Xanh có, món nào ra chợ, rồi gửi kèm địa
-            chỉ và link bản đồ.
+            {unsorted} món chưa biết mua ở đâu. Chạm vào món để tự chọn chỗ mua, hoặc nói với Claude “phân
+            loại danh sách đi chợ, tui ở [quận/khu vực]” để Claude tra và gửi kèm địa chỉ, link bản đồ.
           </p>
         ) : null}
 
@@ -119,44 +127,20 @@ export default async function ShoppingPage() {
 
             <ul className="rounded-[18px] border border-line bg-surface px-3.5">
               {group.lines.map((line, i) => (
-                <li
-                  key={line.id}
-                  className={`flex items-center gap-3 py-2.5 ${i > 0 ? 'border-t border-line-soft' : ''}`}
-                >
-                  <form action={setBoughtAction.bind(null, line.id, true)} className="flex">
-                    <button
-                      type="submit"
-                      aria-label={`Đánh dấu đã mua ${line.name}`}
-                      className="size-6 shrink-0 rounded-full border-2 border-ink"
-                    />
-                  </form>
-                  <div className="flex min-w-0 grow flex-col gap-0.5">
-                    <span className="truncate font-medium">{line.name}</span>
-                    {line.note || line.recipeTitle ? (
-                      <span className="truncate text-xs text-muted">
-                        {[line.note, line.recipeTitle ? `cho ${line.recipeTitle}` : null]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    ) : null}
-                  </div>
-                  <span className="shrink-0 font-mono text-[13px] text-muted tabular-nums">
-                    {line.quantity != null
-                      ? `${formatQuantity(line.quantity)}${line.unit ? ` ${line.unit}` : ''}`
-                      : ''}
-                  </span>
-                  <form action={removeShoppingItemAction.bind(null, line.id)} className="flex">
-                    <button
-                      type="submit"
-                      aria-label={`Bỏ ${line.name} khỏi danh sách`}
-                      className="flex size-9 items-center justify-center rounded-full text-muted hover:text-primary"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-                        <path d="M6 6l12 12M18 6L6 18" />
-                      </svg>
-                    </button>
-                  </form>
-                </li>
+                <ShoppingLineRow
+                  key={`${line.id}:${line.quantity}:${line.unit}:${line.storeId}`}
+                  first={i === 0}
+                  choices={choices}
+                  line={{
+                    id: line.id,
+                    name: line.name,
+                    amount:
+                      line.quantity != null ? `${formatQuantity(line.quantity)}${line.unit ? ` ${line.unit}` : ''}` : '',
+                    detail: [line.note, line.recipeTitle ? `cho ${line.recipeTitle}` : null].filter(Boolean).join(' · ') || null,
+                    note: line.note,
+                    storeValue: line.storeId ? `store:${line.storeId}` : '',
+                  }}
+                />
               ))}
             </ul>
           </section>

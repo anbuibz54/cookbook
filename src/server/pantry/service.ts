@@ -272,3 +272,40 @@ export async function suggestFromPantry(
     .slice(0, limit)
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* Editing by hand                                                             */
+/* -------------------------------------------------------------------------- */
+
+export type PantryEdit = {
+  quantity: number | null
+  unit: string | null
+  /** YYYY-MM-DD or null to clear. */
+  expiresOn: string | null
+  note: string | null
+}
+
+/** Change what the pantry says about one item. Grams are recomputed from the linked food. */
+export async function updatePantryItem(db: Db, userId: string, itemId: string, edit: PantryEdit): Promise<boolean> {
+  const [item] = await db
+    .select()
+    .from(pantryItems)
+    .where(and(eq(pantryItems.id, itemId), eq(pantryItems.userId, userId)))
+  if (!item) return false
+
+  const linked = item.foodId ? await foodsByIds(db, userId, [item.foodId]) : new Map()
+  const grams = gramsFor(edit.quantity, null, edit.unit, item.foodId ? linked.get(item.foodId) : undefined)
+  await db
+    .update(pantryItems)
+    .set({
+      quantity: edit.quantity,
+      quantityMax: null,
+      unit: canonicalUnit(edit.unit),
+      grams: grams?.grams ?? null,
+      expiresOn: edit.expiresOn,
+      note: edit.note,
+      updatedAt: new Date(),
+    })
+    .where(eq(pantryItems.id, item.id))
+  return true
+}
