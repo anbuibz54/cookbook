@@ -40,6 +40,47 @@ function StepTimer({ total }: { total: number }) {
   const [endsAt, setEndsAt] = useState<number | null>(null)
   const [remaining, setRemaining] = useState(total)
   const rang = useRef(false)
+  const audio = useRef<AudioContext | null>(null)
+
+  /**
+   * Prepared on the Start tap, because iOS only lets audio start from a user
+   * gesture — build the context when the timer ends and nothing plays.
+   */
+  const prepareAlarm = () => {
+    if (!audio.current) {
+      const Ctor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (Ctor) audio.current = new Ctor()
+    }
+    void audio.current?.resume().catch(() => {})
+  }
+
+  /**
+   * Three beeps. iPhone has no vibration API at all, so on that phone this is
+   * the whole alarm; Android gets both. Either way it only reaches you while
+   * the app is open — see the note under the buttons.
+   */
+  const ring = () => {
+    navigator.vibrate?.([200, 100, 200, 100, 400])
+
+    const ctx = audio.current
+    if (!ctx || ctx.state !== 'running') return
+    for (let i = 0; i < 3; i++) {
+      const at = ctx.currentTime + i * 0.45
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.frequency.value = 880
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      // Ramped, not switched: a square-edged tone clicks on small speakers.
+      gain.gain.setValueAtTime(0.0001, at)
+      gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.35)
+      osc.start(at)
+      osc.stop(at + 0.36)
+    }
+  }
 
   useEffect(() => {
     if (endsAt == null) return
@@ -52,9 +93,7 @@ function StepTimer({ total }: { total: number }) {
       setEndsAt(null)
       if (!rang.current) {
         rang.current = true
-        // Best effort: a phone in a kitchen is usually face down or across the
-        // room. Silently unavailable on desktop, which is fine.
-        navigator.vibrate?.([200, 100, 200, 100, 400])
+        ring()
       }
     }
 
@@ -103,7 +142,10 @@ function StepTimer({ total }: { total: number }) {
       <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
-          onClick={() => setEndsAt(running ? null : Date.now() + remaining * 1000)}
+          onClick={() => {
+            prepareAlarm()
+            setEndsAt(running ? null : Date.now() + remaining * 1000)
+          }}
           disabled={done}
           className="flex h-12 items-center justify-center gap-2 rounded-full bg-cook-surface font-medium disabled:opacity-40"
         >
@@ -135,6 +177,11 @@ function StepTimer({ total }: { total: number }) {
           Đặt lại
         </button>
       </div>
+
+      <p className="text-center text-xs text-cook-faint text-pretty">
+        Chuông chỉ kêu khi app đang mở. Tắt màn hình hay chuyển app thì đồng hồ vẫn chạy đúng, nhưng
+        không báo được.
+      </p>
     </>
   )
 }
