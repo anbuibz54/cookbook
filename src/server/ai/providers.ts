@@ -26,7 +26,7 @@ type ProviderRow = typeof aiProviders.$inferSelect
 /** What pages may see: everything except the ciphertext. */
 export type AiProvider = Omit<ProviderRow, 'apiKeyEnc'>
 
-export const DEFAULT_MODEL = { anthropic: 'claude-sonnet-5', azure: 'gpt-5.4-nano' } as const
+export const DEFAULT_MODEL = { anthropic: 'claude-sonnet-5', azure: 'gpt-5.4-mini' } as const
 export const KIND_LABEL = { anthropic: 'Claude', azure: 'Azure OpenAI' } as const
 
 export const providerInput = z

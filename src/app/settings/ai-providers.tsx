@@ -21,7 +21,7 @@ export type ProviderView = {
   lastError: string | null
 }
 
-const DEFAULT_MODEL = { anthropic: 'claude-sonnet-5', azure: 'gpt-5.4-nano' }
+const DEFAULT_MODEL = { anthropic: 'claude-sonnet-5', azure: 'gpt-5.4-mini' }
 const KIND_LABEL = { anthropic: 'Claude', azure: 'Azure OpenAI' }
 
 const inputClass =

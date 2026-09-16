@@ -64,3 +64,42 @@ self.addEventListener('fetch', (event) => {
       }),
   )
 })
+
+/*
+ * Reminders. The server sends Declarative Web Push JSON
+ * ({ web_push: 8030, notification: { title, body, navigate, tag } }), which
+ * Safari 18.4+ shows by itself. Everywhere else this handler shows the same
+ * notification. Every push MUST show one: iOS revokes the subscription of an
+ * app that receives pushes silently.
+ */
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { notification: { title: 'Sổ công thức', body: event.data ? event.data.text() : '' } }
+  }
+  const n = data.notification || {}
+  event.waitUntil(
+    self.registration.showNotification(n.title || 'Sổ công thức', {
+      body: n.body || '',
+      tag: n.tag,
+      lang: 'vi',
+      icon: '/apple-icon',
+      badge: '/icon',
+      data: { navigate: n.navigate || '/' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = new URL((event.notification.data && event.notification.data.navigate) || '/', self.location.origin)
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === target.origin)
+      if (open) return open.navigate(target.href).then((w) => (w || open).focus())
+      return self.clients.openWindow(target.href)
+    }),
+  )
+})

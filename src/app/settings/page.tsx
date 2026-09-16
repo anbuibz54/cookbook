@@ -6,11 +6,17 @@ import { listTokens } from '@/server/mcp/tokens'
 import { revokeTokenAction } from '@/app/_actions/tokens'
 import { listProviders } from '@/server/ai/providers'
 import { AiProviders } from './ai-providers'
+import { PushSettings } from './push-settings'
+import { listStreaks } from '@/server/motivation/service'
 import { MintTokenForm } from './mint-token-form'
 
 export default async function SettingsPage() {
   const { user } = await requireUser()
-  const [tokens, providers] = await Promise.all([listTokens(db, user.id), listProviders(db, user.id)])
+  const [tokens, providers, streaks] = await Promise.all([
+    listTokens(db, user.id),
+    listProviders(db, user.id),
+    listStreaks(db, user.id),
+  ])
 
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host')
@@ -22,7 +28,15 @@ export default async function SettingsPage() {
       <div className="space-y-8">
         <section className="space-y-3">
           <header className="space-y-1">
-            <h1 className="text-2xl font-semibold">AI trong app</h1>
+            <h1 className="text-2xl font-semibold">Thông báo nhắc</h1>
+            <p className="text-muted">Mỗi streak có giờ nhắc riêng, đặt khi tạo hoặc sửa streak. Đã làm trong ngày thì không nhắc.</p>
+          </header>
+          <PushSettings reminders={streaks.filter((s) => s.remindAt).length} />
+        </section>
+
+        <section className="space-y-3">
+          <header className="space-y-1">
+            <h2 className="text-2xl font-semibold">AI trong app</h2>
             <p className="text-muted">
               Dùng khi ghi bữa: đoán món từ ảnh, soạn đồ đã dùng cho món không có công thức. Món có trong sổ thì app tự
               tính, không gọi AI.

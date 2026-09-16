@@ -170,7 +170,7 @@ export function StreakForm({
           </div>
         </div>
         <p className="text-xs text-pretty text-muted">
-          Giờ nhắc được lưu ngay; thông báo trên điện thoại sẽ bật khi làm xong phần nhắc nhở.
+          Nhắc trong vòng 15 phút sau giờ đặt. Cần bật thông báo trong Cài đặt (trên iPhone: mở app từ màn hình chính).
         </p>
       </div>
 

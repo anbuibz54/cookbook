@@ -26,9 +26,10 @@ import { createServerClient } from '@supabase/ssr'
  *
  * `/api/mcp` authenticates with a bearer token, not a cookie. Redirecting an
  * MCP client to an HTML login page would turn a clear 401 into a confusing
- * 200, so this proxy must not touch it.
+ * 200, so this proxy must not touch it. `/api/reminders` is the same: the
+ * scheduler authenticates with CRON_SECRET, never a cookie.
  */
-const PUBLIC_PREFIXES = ['/login', '/api/mcp']
+const PUBLIC_PREFIXES = ['/login', '/api/mcp', '/api/reminders']
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))

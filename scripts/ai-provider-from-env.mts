@@ -7,7 +7,8 @@
  * Reads AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_API_KEY / AZURE_OPENAI_DEPLOYMENT.
  * The key is encrypted with THIS machine's AI_KEYS_SECRET; production reads it
  * only if Vercel has the same secret. Replaces an existing Azure provider with
- * the same endpoint and deployment instead of adding a duplicate.
+ * the same endpoint instead of adding a duplicate (so switching deployment,
+ * e.g. nano → mini, updates it).
  */
 
 import { and, eq } from 'drizzle-orm'
@@ -31,7 +32,6 @@ const [existing] = await db
       eq(aiProviders.userId, user.id),
       eq(aiProviders.kind, 'azure'),
       eq(aiProviders.endpoint, normalizeEndpoint(endpoint)),
-      eq(aiProviders.model, model),
     ),
   )
 

@@ -9,6 +9,7 @@ import { db } from '@/server/db'
 import { listJournal, mealCounts } from '@/server/journal/service'
 import { nextWish, streakCards } from '@/server/motivation/service'
 import { StreakCard } from '@/components/streak-card'
+import { PushHint } from '@/components/push-hint'
 
 /** "Thứ tư, 16/09" — Vietnam's calendar, wherever the server runs. */
 function todayLabel() {
@@ -74,6 +75,7 @@ export default async function TodayPage() {
                 }
               />
             ))}
+            {streaks.some((s) => s.remindAt) ? <PushHint /> : null}
           </div>
         ) : null}
 

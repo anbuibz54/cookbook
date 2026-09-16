@@ -491,8 +491,14 @@ export const streaks = cookbook.table('streaks', {
   restPerWeek: smallint('rest_per_week').notNull().default(0),
   timesPerWeek: smallint('times_per_week').notNull().default(1),
   trigger: streakTriggerEnum('trigger').notNull(),
-  /** "HH:MM" Vietnam time; null = no reminder. Sent by the reminder job (phase 4). */
+  /** "HH:MM" Vietnam time; null = no reminder. Sent by /api/reminders/tick. */
   remindAt: text('remind_at'),
+  /**
+   * The Vietnam day this streak's reminder was last handled (sent, or skipped
+   * because the day already counted). Claimed atomically, so two overlapping
+   * scheduler runs cannot both send.
+   */
+  lastRemindedOn: date('last_reminded_on'),
   position: smallint('position').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -591,4 +597,30 @@ export const aiProviders = cookbook.table('ai_providers', {
 }, (t) => [
   index('ai_providers_user_idx').on(t.userId, t.createdAt),
   uniqueIndex('ai_providers_one_active_idx').on(t.userId).where(sql`${t.active}`),
+])
+
+/* -------------------------------------------------------------------------- */
+/* Web push                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One device that allowed notifications. On iPhone that means the app is
+ * installed to the home screen (iOS 16.4+) and the user tapped "Bật".
+ *
+ * `endpoint` is the push service URL and is unique per device+app. A 404/410
+ * from the push service means the subscription is gone: the row is deleted.
+ */
+export const pushSubscriptions = cookbook.table('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
+}, (t) => [
+  uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint),
+  index('push_subscriptions_user_idx').on(t.userId),
 ])

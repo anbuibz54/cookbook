@@ -151,9 +151,9 @@ shop needs web search and local knowledge, so it is Claude's, through
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
 "Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
-2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done)
+2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done) → 4 reminders (done)
 (multi-provider, keys encrypted per user) → 4 web push reminders per streak
-(Supabase `pg_cron` + `pg_net`, enabled by the user) → 5 monthly share card.
+→ 5 monthly share card.
 
 - **journal_entries** (`cooked_on` is a Vietnam-calendar date, see
   `src/lib/dates.ts`), **journal_dishes** (`recipe_id` null = no recipe;
@@ -198,8 +198,7 @@ The daily log, and the moment the pantry learns what was used. Mockups: page
   over a date range; shown until 30 days after they end.
 - **Wishes** are conquered inside the meal transaction (`conquerWishes`):
   same recipe, or same normalised name. MCP `add_wish` lets Claude pin one.
-- `remind_at` is stored per streak ("HH:MM", Vietnam time) for phase 4; no
-  notification is sent yet and the form says so.
+- `remind_at` per streak ("HH:MM", Vietnam time); see Reminders.
 
 ## In-app AI (phase 3, built 2026-09-16)
 
@@ -231,8 +230,37 @@ ships one.
   unticked** (a wrong guess would empty the fridge); AI purchase rows ticked.
   The prompt makes it name the dish from the photo BEFORE reading the pantry —
   without that, gpt-5.4-nano called a canh chua "bún gà" because the fridge
-  held chicken. nano is weak at recognising dishes; gpt-5.4-mini is the
-  suggested upgrade. A call takes ~15 s with a photo.
+  held chicken. nano was weak at recognising dishes; the user switched to
+  gpt-5.4-mini (the default for new Azure providers). A call takes ~15 s with a photo.
+
+## Reminders (phase 4, built 2026-09-16)
+
+- **Scheduler**: Supabase `pg_cron` job `cookbook-reminders`, every 15 min,
+  `pg_net` POST to `/api/reminders/tick` with `Authorization: Bearer
+  <CRON_SECRET>` read from Vault secret `cookbook_cron_secret` at run time.
+  Set up by `pnpm reminders:cron [baseUrl] [--enable-extensions]` (idempotent;
+  touches only that job, that secret and the two extensions). Vercel Cron is
+  not an option: Hobby runs once a day. pg_cron/pg_net were NOT enabled when
+  this was built despite the user believing so; the script enabled them.
+- **Tick** (`src/server/push/reminders.ts`): due = `remind_at` passed today,
+  by at most 120 minutes. Claim first (`streaks.last_reminded_on = today`
+  where it was not), then check the streak still needs doing, then send — so
+  overlapping or repeated runs never double-send. One notification per person
+  per run, however many streaks are due. `/api/reminders` is public in
+  proxy.ts (bearer secret, no cookie).
+- **Push** (`src/server/push/service.ts`, `web-push`): VAPID pair
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (rotating it kills every
+  subscription). Payload is Declarative Web Push (`web_push: 8030`, absolute
+  `navigate`), which iOS 18.4+ shows itself; `public/sw.js` shows the same for
+  other browsers. Every push shows a notification — iOS revokes silent ones.
+  404/410 from the push service deletes the subscription. TTL 4 h.
+- **Devices** (`push_subscriptions`, unique endpoint): enabled from Settings →
+  "Thông báo nhắc" by a tap (iOS asks only from a gesture, and only in the app
+  opened from the home screen). The service worker re-sends the subscription
+  once a day on app open. Hôm nay shows a one-line hint when streaks have
+  reminder times but this device is not subscribed.
+- Testing: Chromium incognito (Playwright's default context) has no Push API;
+  use a persistent profile. A real send through FCM worked from there.
 
 ## MCP (`src/server/mcp/server.ts`)
 
@@ -271,6 +299,7 @@ Connect Claude Code:
 - `pnpm check:streaks` — streak rules; no database.
 - `pnpm storage:ensure` — creates/refreshes the private photo bucket.
 - `pnpm ai:from-env <email>` — saves .env.local's Azure settings as that user's AI provider.
+- `pnpm reminders:cron [baseUrl]` — (re)creates the pg_cron job that drives reminders.
 - `pnpm seed:test` — (re)creates `cookbook.test@example.com` with sample data,
   password in `.env.local`. Wipes only that account. Resetting the password
   signs out any open session of it. Use it to check screens in a real browser;
