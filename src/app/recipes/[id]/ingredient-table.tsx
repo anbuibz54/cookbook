@@ -43,7 +43,9 @@ export function IngredientTable({
   const counted = rows.filter((r) => !r.optional)
   const totalGrams = counted.reduce((sum, r) => sum + (r.grams ?? 0) * factor, 0)
   const totalKcal = counted.reduce((sum, r) => sum + (r.kcal ?? 0) * factor, 0)
-  const anyMissing = counted.some((r) => r.kcal == null)
+  // Two different gaps, two different fixes: link a food, or give a weight.
+  const unlinked = counted.some((r) => r.kcal == null && !r.linked)
+  const unweighed = counted.some((r) => r.kcal == null && r.linked)
 
   const step = (delta: number) => setServings((s) => Math.min(100, Math.max(1, s + delta)))
 
@@ -107,9 +109,9 @@ export function IngredientTable({
             >
               <span className="flex items-center gap-1.5">
                 {row.name}
-                {!row.optional && !row.linked ? (
+                {!row.optional && row.kcal == null ? (
                   <span
-                    aria-label="chưa có số liệu dinh dưỡng"
+                    aria-label={row.linked ? 'chưa biết cân nặng' : 'chưa có số liệu dinh dưỡng'}
                     className="size-[7px] shrink-0 rounded-full bg-carbs"
                   />
                 ) : null}
@@ -138,10 +140,14 @@ export function IngredientTable({
           <span className="text-right font-mono text-[13px] tabular-nums">{round(totalKcal)}</span>
         </div>
 
-        {anyMissing ? (
-          <p className="flex items-center gap-1.5 pt-2.5 text-xs text-muted">
-            <span aria-hidden="true" className="size-[7px] rounded-full bg-carbs" />
-            Chưa có số liệu, nhờ Claude liên kết thực phẩm giúp
+        {unlinked || unweighed ? (
+          <p className="flex items-start gap-1.5 pt-2.5 text-xs text-pretty text-muted">
+            <span aria-hidden="true" className="mt-1 size-[7px] shrink-0 rounded-full bg-carbs" />
+            {unlinked && unweighed
+              ? 'Chưa tính được: có dòng chưa liên kết thực phẩm, có dòng chưa biết cân nặng. Nhờ Claude sửa giúp.'
+              : unlinked
+                ? 'Chưa tính được: dòng này chưa liên kết thực phẩm. Nhờ Claude liên kết giúp.'
+                : 'Chưa tính được: chưa biết dòng này nặng bao nhiêu gram. Nhờ Claude điền cân nặng giúp.'}
           </p>
         ) : null}
       </section>

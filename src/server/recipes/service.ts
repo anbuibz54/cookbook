@@ -214,6 +214,15 @@ export async function listRecipeSummaries(
   }))
 }
 
+/** All of this user's recipes, whatever filter the screen is showing. */
+export async function countRecipes(db: Db, userId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(recipes)
+    .where(eq(recipes.userId, userId))
+  return Number(row?.count ?? 0)
+}
+
 /** How many recipes carry each tag, most used first. Drives the home screen's tiles. */
 export async function tagCounts(
   db: Db,

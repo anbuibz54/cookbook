@@ -52,6 +52,15 @@ export async function searchFoods(
       sql`(${foods.searchText} ~ ${wordPrefix} or lower(coalesce(${foods.nameEn}, '')) ~ ${wordPrefix}) desc`,
       // Then the phrase as whole words anywhere, before scattered words.
       sql`((' ' || ${foods.searchText}) like ${`% ${escaped}%`}) desc`,
+      // Among equally good name matches, a food that can turn "3 quả" or
+      // "1 muỗng" into grams beats one that cannot: the Vietnamese table's
+      // trứng gà has no portion weights, USDA's does, and picking the first
+      // hit should not silently leave a recipe line unweighed.
+      // Raw SQL with an explicit alias: a drizzle column reference inside
+      // this subquery renders unqualified and binds to the wrong table.
+      sql.raw(
+        `(exists (select 1 from "cookbook"."food_portions" fp where fp.food_id = "foods"."id") or "foods"."density_g_per_ml" is not null) desc`,
+      ),
       // Curated foods (with a Vietnamese name) before the long tail, then
       // shorter text: "trứng gà" before "bánh trứng gà nướng".
       sql`(${foods.nameVi} is null)`,

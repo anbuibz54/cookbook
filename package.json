@@ -14,7 +14,8 @@
     "mcp:token": "tsx --env-file=.env.local scripts/mint-token.mts",
     "mcp:smoke": "tsx --env-file=.env.local scripts/smoke-mcp.mts",
     "foods:import": "tsx --env-file=.env.local scripts/import-foods.mts",
-    "check:cook": "tsx scripts/check-cook-matching.mts"
+    "check:cook": "tsx scripts/check-cook-matching.mts",
+    "seed:test": "tsx --env-file=.env.local scripts/seed-test-account.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

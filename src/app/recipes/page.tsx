@@ -4,7 +4,7 @@ import { Thumb } from '@/components/thumb'
 import { requireUser } from '@/lib/auth/dal'
 import { round } from '@/lib/nutrition'
 import { db } from '@/server/db'
-import { listRecipeSummaries, tagCounts } from '@/server/recipes/service'
+import { countRecipes, listRecipeSummaries, tagCounts } from '@/server/recipes/service'
 
 function formatClock(minutes: number | null) {
   if (minutes == null) return '—'
@@ -18,11 +18,12 @@ export default async function RecipesPage({
 }) {
   const { user } = await requireUser()
   const { q, tag } = await searchParams
-  const [recipes, tags] = await Promise.all([
+  const [recipes, tags, total] = await Promise.all([
     listRecipeSummaries(db, user.id, { search: q, tag }),
     tagCounts(db, user.id, 8),
+    // Not the sum of tag counts: a recipe with two tags would count twice.
+    countRecipes(db, user.id),
   ])
-  const total = tags.reduce((sum, t) => sum + t.count, 0)
 
   return (
     <PageTransition>
