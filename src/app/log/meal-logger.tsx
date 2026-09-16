@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { suggestMealAiAction } from '@/app/_actions/ai'
 import { proposeMealAction, saveMealAction } from '@/app/_actions/journal'
 import { parseAmount } from '@/lib/amount'
 import { shrinkPhoto } from '@/lib/photo'
@@ -11,9 +12,19 @@ import { normalizeForSearch } from '@/lib/text'
 type RecipeChoice = { id: string; title: string; searchText: string }
 type PantryChoice = { id: string; name: string; have: string }
 type Dish = { recipeId: string | null; name: string }
-type UseRow = { pantryItemId: string; name: string; have: string; amount: string; forDish: string; ticked: boolean }
+/** Where a row came from: recipe × pantry (re-proposed when dishes change), typed by hand, or suggested by AI. */
+type Source = 'recipe' | 'manual' | 'ai'
+type UseRow = {
+  pantryItemId: string
+  name: string
+  have: string
+  amount: string
+  forDish: string
+  ticked: boolean
+  source: Source
+}
 type StreakChoice = { id: string; name: string; trigger: 'tick' | 'any_meal' | 'new_dish'; doneToday: boolean }
-type BuyRow = { key: string; name: string; amount: string; forDish: string; ticked: boolean }
+type BuyRow = { key: string; name: string; amount: string; forDish: string; ticked: boolean; source: Source }
 
 const keyOf = (name: string) => normalizeForSearch(name)
 
@@ -34,6 +45,7 @@ export function MealLogger({
   backHref,
   cooked,
   streaks,
+  ai,
 }: {
   today: string
   recipes: RecipeChoice[]
@@ -43,6 +55,8 @@ export function MealLogger({
   /** Dish identity (`r:<recipeId>` / `n:<matchKey>`) → times logged before. */
   cooked: Record<string, number>
   streaks: StreakChoice[]
+  /** The active AI provider's name, or null when none is set up. */
+  ai: string | null
 }) {
   const [dishes, setDishes] = useState<Dish[]>(initialDish ? [initialDish] : [])
   const [query, setQuery] = useState('')
@@ -56,6 +70,9 @@ export function MealLogger({
   )
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
+  const [aiPhoto, setAiPhoto] = useState<Blob | null>(null)
+  const [aiNote, setAiNote] = useState<{ text: string; error: boolean; setup?: boolean } | null>(null)
+  const [asking, startAsking] = useTransition()
   const [newBuy, setNewBuy] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [proposing, startProposing] = useTransition()
@@ -74,14 +91,22 @@ export function MealLogger({
     startProposing(async () => {
       const proposal = ids.length ? await proposeMealAction(ids) : { used: [], bought: [] }
       setUsed((rows) => {
-        const manual = rows.filter((r) => !r.forDish)
-        const next = proposal.used.map((p) => rows.find((r) => r.pantryItemId === p.pantryItemId) ?? p)
+        const manual = rows.filter((r) => r.source !== 'recipe')
+        const next = proposal.used.map(
+          (p) => rows.find((r) => r.pantryItemId === p.pantryItemId) ?? { ...p, source: 'recipe' as const },
+        )
         return [...next, ...manual.filter((m) => !next.some((n) => n.pantryItemId === m.pantryItemId))]
       })
       setBought((rows) => {
-        const manual = rows.filter((r) => !r.forDish)
+        const manual = rows.filter((r) => r.source !== 'recipe')
         const next = proposal.bought.map(
-          (p) => rows.find((r) => r.key === keyOf(p.name)) ?? { ...p, key: keyOf(p.name), ticked: true },
+          (p) =>
+            rows.find((r) => r.key === keyOf(p.name)) ?? {
+              ...p,
+              key: keyOf(p.name),
+              ticked: true,
+              source: 'recipe' as const,
+            },
         )
         return [...next, ...manual.filter((m) => !next.some((n) => n.key === m.key))]
       })
@@ -125,6 +150,7 @@ export function MealLogger({
     try {
       const blob = await shrinkPhoto(file)
       setPhoto({ blob, url: URL.createObjectURL(blob) })
+      setAiPhoto(await shrinkPhoto(blob, 1024))
     } catch {
       setError('Không đọc được ảnh này. Thử ảnh khác nhé.')
     } finally {
@@ -160,6 +186,59 @@ export function MealLogger({
     })
   }
 
+  /** Ask the active AI to fill the gaps: dishes from the photo, pantry use and purchases for dishes without a recipe. */
+  function askAi() {
+    setAiNote(null)
+    const form = new FormData()
+    form.set(
+      'payload',
+      JSON.stringify({
+        dishes: dishes.map((d) => ({ name: d.name, recipeId: d.recipeId })),
+        accounted: used.filter((r) => r.source === 'recipe').map((r) => r.pantryItemId),
+      }),
+    )
+    if (aiPhoto) form.set('photo', aiPhoto, 'meal.jpg')
+
+    startAsking(async () => {
+      const result = await suggestMealAiAction(form)
+      if (!result.ok) {
+        setAiNote({ text: result.error, error: true, setup: result.setup })
+        return
+      }
+      if (result.dishes.length) {
+        setDishes((list) => [
+          ...list,
+          ...result.dishes
+            .filter((name) => !list.some((d) => keyOf(d.name) === keyOf(name)))
+            .map((name) => {
+              const recipe = recipes.find((r) => keyOf(r.title) === keyOf(name))
+              return recipe ? { recipeId: recipe.id, name: recipe.title } : { recipeId: null, name }
+            }),
+        ])
+      }
+      setUsed((rows) => [
+        ...rows,
+        ...result.used
+          .filter((u) => !rows.some((r) => r.pantryItemId === u.pantryItemId))
+          // Unticked: a wrong guess here would take food out of the pantry. The cook ticks what is right.
+          .map((u) => ({ ...u, ticked: false, source: 'ai' as const })),
+      ])
+      setBought((rows) => [
+        ...rows,
+        ...result.bought
+          .filter((b) => !rows.some((r) => r.key === keyOf(b.name)))
+          .map((b) => ({ ...b, key: keyOf(b.name), ticked: true, source: 'ai' as const })),
+      ])
+      const added = result.used.length + result.bought.length + result.dishes.length
+      setAiNote({
+        text: result.comment ?? (added ? `AI đã soạn ${added} dòng. Đồ trong tủ chưa được tick, tick cái nào đúng nhé.` : 'AI không thấy gì để thêm.'),
+        error: false,
+      })
+    })
+  }
+
+  const hasAiRows = used.some((r) => r.source === 'ai') || bought.some((r) => r.source === 'ai')
+  const aiUseful = Boolean(aiPhoto) || dishes.some((d) => !d.recipeId)
   const unlisted = pantry.filter((p) => !used.some((u) => u.pantryItemId === p.id))
 
   return (
@@ -187,7 +266,10 @@ export function MealLogger({
           <div className="absolute inset-x-3 bottom-3 flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setPhoto(null)}
+              onClick={() => {
+                setPhoto(null)
+                setAiPhoto(null)
+              }}
               className="h-9 rounded-full bg-surface/90 px-3 text-[13px] font-medium"
             >
               Bỏ ảnh
@@ -296,6 +378,46 @@ export function MealLogger({
         ) : null}
       </section>
 
+      {aiUseful ? (
+        <section className="flex flex-col gap-2">
+          {ai ? (
+            <button
+              type="button"
+              onClick={askAi}
+              disabled={asking}
+              className="flex h-12 items-center justify-center gap-2 rounded-full border-2 border-ink bg-tile-mint font-medium disabled:opacity-60"
+            >
+              <SparkIcon />
+              {asking ? 'AI đang xem…' : dishes.length ? 'Nhờ AI soạn đồ đã dùng' : 'Nhờ AI đoán món từ ảnh'}
+            </button>
+          ) : (
+            <Link
+              href="/settings"
+              transitionTypes={['nav-forward']}
+              className="text-center text-[13px] text-pretty text-muted underline"
+            >
+              Cài AI trong Cài đặt để đoán món từ ảnh và soạn đồ cho món không có công thức.
+            </Link>
+          )}
+          {aiNote ? (
+            <p
+              role={aiNote.error ? 'alert' : 'status'}
+              className={`text-center text-[13px] text-pretty ${aiNote.error ? 'text-primary' : 'text-muted'}`}
+            >
+              {aiNote.text}
+              {aiNote.setup ? (
+                <>
+                  {' '}
+                  <Link href="/settings" className="underline">
+                    Mở Cài đặt
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       {dishes.length > 0 ? (
         <>
           {/* Used from the pantry */}
@@ -305,7 +427,11 @@ export function MealLogger({
           >
             <div className="flex items-center justify-between pb-1.5">
               <h2 className="font-display text-lg font-bold">Đã dùng từ tủ lạnh</h2>
-              {proposing ? <span className="text-xs text-muted">đang đối chiếu…</span> : null}
+              {proposing ? (
+                <span className="text-xs text-muted">đang đối chiếu…</span>
+              ) : hasAiRows ? (
+                <AiBadge />
+              ) : null}
             </div>
 
             {used.length === 0 ? (
@@ -337,7 +463,7 @@ export function MealLogger({
                     <div className={`flex min-w-0 flex-col ${row.ticked ? '' : 'text-muted'}`}>
                       <span className="truncate">{row.name}</span>
                       <span className="truncate text-[11px] text-muted">
-                        {[row.have && `tủ còn ${row.have}`, row.forDish && `cho ${row.forDish}`]
+                        {[row.source === 'ai' && 'AI đoán', row.have && `tủ còn ${row.have}`, row.forDish && `cho ${row.forDish}`]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
@@ -364,7 +490,7 @@ export function MealLogger({
                   if (item) {
                     setUsed((rows) => [
                       ...rows,
-                      { pantryItemId: item.id, name: item.name, have: item.have, amount: '', forDish: '', ticked: true },
+                      { pantryItemId: item.id, name: item.name, have: item.have, amount: '', forDish: '', ticked: true, source: 'manual' },
                     ])
                   }
                 }}
@@ -415,7 +541,11 @@ export function MealLogger({
                     <div className={`flex min-w-0 flex-col ${row.ticked ? '' : 'text-muted'}`}>
                       <span className="truncate">{row.name}</span>
                       <span className="truncate text-[11px] text-muted">
-                        {row.forDish ? `công thức cần, tủ không có` : 'thêm tay'}
+                        {row.source === 'recipe'
+                          ? 'công thức cần, tủ không có'
+                          : row.source === 'ai'
+                            ? `AI đoán${row.forDish ? ` · cho ${row.forDish}` : ''}`
+                            : 'thêm tay'}
                       </span>
                     </div>
                     <AmountBox
@@ -438,7 +568,7 @@ export function MealLogger({
                 const name = newBuy.trim()
                 if (!name) return
                 if (!bought.some((b) => b.key === keyOf(name))) {
-                  setBought((rows) => [...rows, { key: keyOf(name), name, amount: '', forDish: '', ticked: true }])
+                  setBought((rows) => [...rows, { key: keyOf(name), name, amount: '', forDish: '', ticked: true, source: 'manual' }])
                 }
                 setNewBuy('')
               }}
@@ -565,6 +695,23 @@ function AmountBox({
         kind === 'text' ? 'border-primary' : 'border-line'
       }`}
     />
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z" />
+    </svg>
+  )
+}
+
+function AiBadge() {
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-tile-mint px-2 py-0.5 text-[11px] text-ink">
+      <SparkIcon />
+      AI soạn
+    </span>
   )
 }
 

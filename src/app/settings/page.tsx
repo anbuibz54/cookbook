@@ -4,11 +4,13 @@ import { requireUser } from '@/lib/auth/dal'
 import { db } from '@/server/db'
 import { listTokens } from '@/server/mcp/tokens'
 import { revokeTokenAction } from '@/app/_actions/tokens'
+import { listProviders } from '@/server/ai/providers'
+import { AiProviders } from './ai-providers'
 import { MintTokenForm } from './mint-token-form'
 
 export default async function SettingsPage() {
   const { user } = await requireUser()
-  const tokens = await listTokens(db, user.id)
+  const [tokens, providers] = await Promise.all([listTokens(db, user.id), listProviders(db, user.id)])
 
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host')
@@ -18,8 +20,31 @@ export default async function SettingsPage() {
   return (
     <AppShell>
       <div className="space-y-8">
+        <section className="space-y-3">
+          <header className="space-y-1">
+            <h1 className="text-2xl font-semibold">AI trong app</h1>
+            <p className="text-muted">
+              Dùng khi ghi bữa: đoán món từ ảnh, soạn đồ đã dùng cho món không có công thức. Món có trong sổ thì app tự
+              tính, không gọi AI.
+            </p>
+          </header>
+          <AiProviders
+            providers={providers.map((p) => ({
+              id: p.id,
+              kind: p.kind,
+              label: p.label,
+              endpoint: p.endpoint,
+              model: p.model,
+              apiKeyHint: p.apiKeyHint,
+              active: p.active,
+              checked: p.lastCheckedAt != null,
+              lastError: p.lastError,
+            }))}
+          />
+        </section>
+
         <header className="space-y-2">
-          <h1 className="text-2xl font-semibold">Kết nối AI</h1>
+          <h2 className="text-2xl font-semibold">Kết nối Claude qua MCP</h2>
           <p className="text-muted">
             Tạo token rồi thêm cookbook vào Claude. Sau đó chỉ cần nói “lưu công thức này” là xong.
           </p>

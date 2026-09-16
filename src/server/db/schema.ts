@@ -556,3 +556,39 @@ export const wishes = cookbook.table('wishes', {
   index('wishes_recipe_idx').on(t.recipeId),
   index('wishes_entry_idx').on(t.conqueredEntryId),
 ])
+
+/* -------------------------------------------------------------------------- */
+/* In-app AI                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export const aiProviderKindEnum = cookbook.enum('ai_provider_kind', ['anthropic', 'azure'])
+
+/**
+ * An AI provider the user configured (their own key, their own bill).
+ *
+ * `apiKeyEnc` is AES-256-GCM ciphertext (src/server/ai/crypto.ts) under the
+ * server's AI_KEYS_SECRET — the database alone never holds a usable key, and
+ * the key never goes back to the browser; `apiKeyHint` (last four characters)
+ * is what the settings screen shows. At most one provider is active per user.
+ *
+ * `endpoint`: the Azure / Foundry resource URL; unused for Anthropic.
+ * `model`: the Anthropic model id, or the Azure DEPLOYMENT name.
+ */
+export const aiProviders = cookbook.table('ai_providers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: aiProviderKindEnum('kind').notNull(),
+  label: text('label').notNull(),
+  endpoint: text('endpoint'),
+  model: text('model').notNull(),
+  apiKeyEnc: text('api_key_enc').notNull(),
+  apiKeyHint: text('api_key_hint').notNull(),
+  active: boolean('active').notNull().default(false),
+  lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('ai_providers_user_idx').on(t.userId, t.createdAt),
+  uniqueIndex('ai_providers_one_active_idx').on(t.userId).where(sql`${t.active}`),
+])

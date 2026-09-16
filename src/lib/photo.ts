@@ -12,9 +12,10 @@
 const MAX_EDGE = 1600
 const QUALITY = 0.82
 
-export async function shrinkPhoto(file: File): Promise<Blob> {
+/** `maxEdge` 1600 for the stored photo; the AI gets a 1024 px copy (fewer image tokens). */
+export async function shrinkPhoto(file: Blob, maxEdge = MAX_EDGE): Promise<Blob> {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
   const width = Math.round(bitmap.width * scale)
   const height = Math.round(bitmap.height * scale)
 

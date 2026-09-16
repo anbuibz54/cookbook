@@ -151,7 +151,7 @@ shop needs web search and local knowledge, so it is Claude's, through
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
 "Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
-2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI
+2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done)
 (multi-provider, keys encrypted per user) → 4 web push reminders per streak
 (Supabase `pg_cron` + `pg_net`, enabled by the user) → 5 monthly share card.
 
@@ -201,6 +201,39 @@ The daily log, and the moment the pantry learns what was used. Mockups: page
 - `remind_at` is stored per streak ("HH:MM", Vietnam time) for phase 4; no
   notification is sent yet and the form says so.
 
+## In-app AI (phase 3, built 2026-09-16)
+
+`src/server/ai/`. The user brings their own provider and key; the app never
+ships one.
+
+- **ai_providers**: kind `anthropic` | `azure`, `model` (Anthropic model id, or
+  the Azure DEPLOYMENT name), `endpoint` (Azure/Foundry resource URL, stored
+  without `/openai/v1`), at most one `active` per user (partial unique index).
+- **Keys**: AES-256-GCM under `AI_KEYS_SECRET` (`crypto.ts`), hint = last 4
+  characters. Decrypted only inside `providers.ts` to build a model; no action
+  or page ever returns a key. **Vercel needs the same AI_KEYS_SECRET as the
+  machine that saved a key** — the database is shared, so a key saved locally is
+  read by production. Losing the secret = users re-enter keys.
+- **Vercel AI SDK v7** (`ai`, `@ai-sdk/anthropic`, `@ai-sdk/azure`):
+  `generateText({ output: Output.object({ schema }) })` (generateObject is
+  deprecated), `instructions` not `system`, images as
+  `{ type: 'file', mediaType, data }`. Azure/Foundry: `createAzure({ baseURL:
+  `${endpoint}/openai/v1` })`, `providerOptions.azure.reasoningEffort: 'low'`.
+  Structured-output schemas use `.nullable()`, never optional (Azure strict mode).
+- Settings saves AND tests (a 1-word call) in one go, so a bad key shows where
+  it was typed. `pnpm ai:from-env <email>` saves the `AZURE_OPENAI_*` values
+  from .env.local as a user's provider.
+- **Meal log** (`meal.ts`, button on /log when there is a photo or a dish
+  without a recipe): the model guesses dishes from the photo, pantry use and
+  purchases. Guards: pantry items only by code from the list it was given
+  (unknown codes dropped); items already proposed from recipes are dropped;
+  "bought" items the pantry already has are dropped. **AI pantry rows arrive
+  unticked** (a wrong guess would empty the fridge); AI purchase rows ticked.
+  The prompt makes it name the dish from the photo BEFORE reading the pantry —
+  without that, gpt-5.4-nano called a canh chua "bún gà" because the fridge
+  held chicken. nano is weak at recognising dishes; gpt-5.4-mini is the
+  suggested upgrade. A call takes ~15 s with a photo.
+
 ## MCP (`src/server/mcp/server.ts`)
 
 Fourteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
@@ -237,6 +270,7 @@ Connect Claude Code:
 - `pnpm check:amount` — the meal-log amount parser; no database.
 - `pnpm check:streaks` — streak rules; no database.
 - `pnpm storage:ensure` — creates/refreshes the private photo bucket.
+- `pnpm ai:from-env <email>` — saves .env.local's Azure settings as that user's AI provider.
 - `pnpm seed:test` — (re)creates `cookbook.test@example.com` with sample data,
   password in `.env.local`. Wipes only that account. Resetting the password
   signs out any open session of it. Use it to check screens in a real browser;
@@ -320,10 +354,9 @@ verdict is that only the timer alarm is missed, which an Expo shell around this
 web UI could add without a rewrite.
 
 ## Deferred — do not build yet
-- In-app AI: phase 3 of the journal plan. Default Azure OpenAI deployment
-  `gpt-5.4-nano` (dev creds in `.env.local` as `AZURE_OPENAI_*`), Claude
-  default model `claude-sonnet-5` once the user has an API key (a Claude
-  subscription OAuth token cannot be used by this app).
+- More in-app AI: paste text/photo → structured recipe (today recipes arrive
+  via MCP). Claude as a provider needs an API key (sk-ant-api03); a Claude
+  subscription OAuth token cannot be used by this app.
 - Video analysis (in-app). Deferred by the user.
 - Reviewing machine-translated food names in the app (flip `name_vi_reviewed`).
 - Using `wastePct` for as-bought quantities ("1 kg cá" includes bones).

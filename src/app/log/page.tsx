@@ -5,6 +5,7 @@ import { formatAmount } from '@/lib/amount'
 import { db } from '@/server/db'
 import { recipeChoices } from '@/server/journal/service'
 import { dishHistory, dishKeys, streakCards } from '@/server/motivation/service'
+import { listProviders } from '@/server/ai/providers'
 import { listPantry } from '@/server/pantry/service'
 import { MealLogger } from './meal-logger'
 
@@ -22,6 +23,7 @@ export default async function LogPage({ searchParams }: PageProps<'/log'>) {
     listPantry(db, user.id),
     streakCards(db, user.id, { history }),
   ])
+  const provider = (await listProviders(db, user.id)).find((p) => p.active)
   // How often each dish identity was logged, for the "món mới" chip.
   const cooked: Record<string, number> = {}
   for (const dish of history) for (const key of dishKeys(dish)) cooked[key] = (cooked[key] ?? 0) + 1
@@ -39,6 +41,7 @@ export default async function LogPage({ searchParams }: PageProps<'/log'>) {
         initialDish={start ? { recipeId: start.id, name: start.title } : null}
         backHref={start ? `/recipes/${start.id}` : '/'}
         cooked={cooked}
+        ai={provider ? provider.label : null}
         streaks={streaks.map((s) => ({ id: s.id, name: s.name, trigger: s.trigger, doneToday: s.doneToday }))}
       />
     </PageTransition>
