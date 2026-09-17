@@ -60,9 +60,25 @@ export default async function SettingsPage() {
         <header className="space-y-2">
           <h2 className="text-2xl font-semibold">Kết nối Claude qua MCP</h2>
           <p className="text-muted">
-            Tạo token rồi thêm cookbook vào Claude. Sau đó chỉ cần nói “lưu công thức này” là xong.
+            Sau khi kết nối, chỉ cần nói với Claude “lưu công thức này”, “tối nay nấu canh chua” là xong.
           </p>
         </header>
+
+        <section className="space-y-2 rounded-[18px] border border-line bg-surface p-4">
+          <h2 className="font-semibold">Claude trên điện thoại, claude.ai, Claude Desktop</h2>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-pretty">
+            <li>Mở claude.ai (trên web, làm một lần) → Cài đặt → Connectors → Add custom connector.</li>
+            <li>
+              Dán địa chỉ: <span className="font-mono break-all">{endpoint}</span>, không cần điền OAuth Client ID/Secret.
+            </li>
+            <li>Bấm Connect, đăng nhập tài khoản này và bấm “Cho phép”.</li>
+          </ol>
+          <p className="text-xs text-muted">
+            Kết nối xong dùng được luôn trên app Claude điện thoại. Kết nối hiện trong “Token đang có”, thu hồi ở đó.
+          </p>
+        </section>
+
+        <h2 className="pt-2 font-semibold">Claude Code (dùng token)</h2>
 
         <section className="space-y-3">
           <h2 className="font-semibold">Tạo token</h2>

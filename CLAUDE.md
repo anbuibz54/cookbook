@@ -331,6 +331,30 @@ Deliberately absent: `delete_recipe` (belongs in the app, where it is visible).
 `get_recipe` returns JSON in exactly the shape `update_recipe` accepts, so a model
 can round-trip it.
 
+### Two ways in
+
+- **Claude on the phone, claude.ai, Claude Desktop → OAuth** (added
+  2026-09-17). Those apps only speak OAuth for a personal custom connector
+  (static bearer headers are an org-admin beta). The user adds a custom
+  connector with URL `<origin>/api/mcp` and no client id/secret.
+  `src/server/oauth/service.ts` + routes: `/.well-known/oauth-protected-resource[/api/mcp]`
+  (RFC 9728), `/.well-known/oauth-authorization-server` (RFC 8414),
+  `/api/oauth/register` (DCR, public clients only), `/oauth/authorize`
+  (consent page behind login), `/api/oauth/token` (form-encoded; PKCE S256
+  mandatory; access 1 h, refresh 90 days, **rotated in place** on the same
+  `mcp_tokens` row, so a connection is one revocable line in Settings).
+  The 401 from /api/mcp carries `WWW-Authenticate: Bearer resource_metadata=…`;
+  without it Claude cannot discover the flow. `resource` in the metadata must
+  equal the URL the user typed. Codes are claimed before checking, so a failed
+  PKCE attempt burns the code (correct). A bad client/redirect is shown on the
+  page, never redirected to. Proxy keeps the query string in `next`, and login
+  refuses `//host` in `next`.
+  Migration gotcha: a FK to a column needs a UNIQUE *constraint* at table
+  creation; drizzle emits `uniqueIndex` after the FKs, so 0007 failed silently
+  (drizzle-kit printed nothing — run the statements in a rolled-back
+  transaction to see the error).
+- **Claude Code → bearer token** from Settings or `pnpm mcp:token` (never expires).
+
 Tokens: Settings page in the app, or `pnpm mcp:token <email> [name]`.
 Connect Claude Code:
 `claude mcp add --transport http cookbook http://localhost:3100/api/mcp --header "Authorization: Bearer <token>"`

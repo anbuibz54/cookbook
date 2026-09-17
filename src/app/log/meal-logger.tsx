@@ -466,11 +466,17 @@ export function MealLogger({
           >
             <div className="flex items-center justify-between pb-1.5">
               <h2 className="font-display text-lg font-bold">Đã dùng từ tủ lạnh</h2>
-              {proposing ? (
-                <span className="text-xs text-muted">đang đối chiếu…</span>
-              ) : hasAiRows ? (
-                <AiBadge />
-              ) : null}
+              <div className="flex items-center gap-2">
+                {proposing ? (
+                  <span className="text-xs text-muted">đang đối chiếu…</span>
+                ) : hasAiRows ? (
+                  <AiBadge />
+                ) : null}
+                <ToggleAll
+                  rows={used}
+                  onToggle={(ticked) => setUsed((rows) => rows.map((r) => ({ ...r, ticked })))}
+                />
+              </div>
             </div>
 
             {used.length === 0 ? (
@@ -554,7 +560,10 @@ export function MealLogger({
           <section className="flex flex-col rounded-[18px] border border-line bg-surface px-4 pt-3.5 pb-3">
             <div className="flex items-baseline justify-between pb-1.5">
               <h2 className="font-display text-lg font-bold">Mua thêm cho bữa này</h2>
-              <span className="text-xs text-muted">bỏ tick nếu không mua</span>
+              <ToggleAll
+                rows={bought}
+                onToggle={(ticked) => setBought((rows) => rows.map((r) => ({ ...r, ticked })))}
+              />
             </div>
 
             {bought.length > 0 ? (
@@ -734,6 +743,24 @@ function AmountBox({
         kind === 'text' ? 'border-primary' : 'border-line'
       }`}
     />
+  )
+}
+
+/**
+ * "Chọn hết" / "Bỏ chọn hết" for a list of ticked rows: a long recipe should
+ * not mean unticking twenty lines one by one. Flips to whichever is useful.
+ */
+function ToggleAll({ rows, onToggle }: { rows: { ticked: boolean }[]; onToggle: (ticked: boolean) => void }) {
+  if (rows.length < 2) return null
+  const allTicked = rows.every((r) => r.ticked)
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!allTicked)}
+      className="h-8 shrink-0 rounded-full border border-line px-3 text-xs text-muted hover:border-ink hover:text-ink"
+    >
+      {allTicked ? 'Bỏ chọn hết' : 'Chọn hết'}
+    </button>
   )
 }
 

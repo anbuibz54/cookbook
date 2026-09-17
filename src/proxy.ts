@@ -27,9 +27,11 @@ import { createServerClient } from '@supabase/ssr'
  * `/api/mcp` authenticates with a bearer token, not a cookie. Redirecting an
  * MCP client to an HTML login page would turn a clear 401 into a confusing
  * 200, so this proxy must not touch it. `/api/reminders` is the same: the
- * scheduler authenticates with CRON_SECRET, never a cookie.
+ * scheduler authenticates with CRON_SECRET, never a cookie. `/api/oauth` and
+ * `/.well-known` are the OAuth discovery, registration and token endpoints,
+ * called by Claude's servers with no session.
  */
-const PUBLIC_PREFIXES = ['/login', '/api/mcp', '/api/reminders']
+const PUBLIC_PREFIXES = ['/login', '/api/mcp', '/api/reminders', '/api/oauth', '/.well-known']
 
 function isPublic(pathname: string) {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
@@ -90,7 +92,9 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     // Remember where they were headed so login can send them back.
-    url.searchParams.set('next', pathname)
+    // With the query string: /oauth/authorize is useless without its parameters.
+    url.search = ''
+    url.searchParams.set('next', pathname + request.nextUrl.search)
     return NextResponse.redirect(url)
   }
 

@@ -36,7 +36,8 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
 
   const next = formData.get('next')
   revalidatePath('/', 'layout')
-  redirect(typeof next === 'string' && next.startsWith('/') ? next : '/')
+  // A path on this site only: "//evil.example" also starts with a slash.
+  redirect(typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : '/')
 }
 
 export async function signOut() {

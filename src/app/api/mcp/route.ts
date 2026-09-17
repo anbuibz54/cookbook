@@ -3,6 +3,7 @@ import { db } from '@/server/db'
 import { buildMcpServer } from '@/server/mcp/server'
 import { resolveToken } from '@/server/mcp/tokens'
 import { log } from '@/server/logger'
+import { publicOrigin, resourceMetadataUrl } from '@/lib/origin'
 
 /**
  * The MCP endpoint.
@@ -28,7 +29,7 @@ import { log } from '@/server/logger'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function unauthorized(detail: string) {
+function unauthorized(request: Request, detail: string) {
   return Response.json(
     {
       jsonrpc: '2.0',
@@ -37,9 +38,13 @@ function unauthorized(detail: string) {
     },
     {
       status: 401,
-      // Tells a spec-compliant client how to authenticate rather than leaving
-      // it to guess why it was refused.
-      headers: { 'WWW-Authenticate': 'Bearer realm="cookbook"' },
+      // Tells a client how to authenticate rather than leaving it to guess.
+      // `resource_metadata` is what lets Claude (phone, claude.ai) discover the
+      // OAuth flow; without it the connector fails with "Couldn't reach the MCP
+      // server". Bearer tokens from Settings keep working as before.
+      headers: {
+        'WWW-Authenticate': `Bearer realm="cookbook", resource_metadata="${resourceMetadataUrl(publicOrigin(request))}"`,
+      },
     },
   )
 }
@@ -48,7 +53,7 @@ async function handle(request: Request): Promise<Response> {
   const auth = request.headers.get('authorization')
   if (!auth?.startsWith('Bearer ')) {
     log.warn('mcp auth missing', { path: new URL(request.url).pathname })
-    return unauthorized('Missing bearer token.')
+    return unauthorized(request, 'Missing bearer token.')
   }
 
   const principal = await resolveToken(db, auth.slice('Bearer '.length).trim())
@@ -57,7 +62,7 @@ async function handle(request: Request): Promise<Response> {
     // was is not information an unauthenticated caller has earned — but it is
     // worth logging, since a run of these is what a probe looks like.
     log.warn('mcp auth rejected', { path: new URL(request.url).pathname })
-    return unauthorized('Invalid or revoked token.')
+    return unauthorized(request, 'Invalid, expired or revoked token.')
   }
 
   const url = new URL(request.url)

@@ -9,7 +9,7 @@
  */
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull, or } from 'drizzle-orm'
 import type { Db } from '../db'
 import { mcpTokens, users } from '../db/schema'
 
@@ -55,7 +55,7 @@ export type Principal = { userId: string; email: string; tokenId: string }
  * make, confirming the stored hash matches what we computed; it is belt and
  * braces over an already-constant-time lookup.
  *
- * Revoked tokens do not resolve. `lastUsedAt` is updated on success, which is
+ * Revoked and expired tokens do not resolve. `lastUsedAt` is updated on success, which is
  * what makes an abandoned token visible later.
  */
 export async function resolveToken(db: Db, plaintext: string): Promise<Principal | null> {
@@ -72,7 +72,15 @@ export async function resolveToken(db: Db, plaintext: string): Promise<Principal
     })
     .from(mcpTokens)
     .innerJoin(users, eq(mcpTokens.userId, users.id))
-    .where(and(eq(mcpTokens.tokenHash, digest), isNull(mcpTokens.revokedAt)))
+    .where(
+      and(
+        eq(mcpTokens.tokenHash, digest),
+        isNull(mcpTokens.revokedAt),
+        // OAuth access tokens expire (and are renewed with the refresh token);
+        // tokens minted in Settings have no expiry.
+        or(isNull(mcpTokens.expiresAt), gt(mcpTokens.expiresAt, new Date())),
+      ),
+    )
     .limit(1)
 
   if (!found) return null

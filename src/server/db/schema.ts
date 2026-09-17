@@ -375,9 +375,52 @@ export const mcpTokens = cookbook.table('mcp_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  /**
+   * Set for a connection made through OAuth (Claude on the phone / web): the
+   * access token expires and is renewed with the refresh token, both rotated
+   * on this same row, so one connection stays one line in Settings. Null on
+   * all four for a token minted in Settings (Claude Code), which never expires.
+   */
+  clientId: text('client_id').references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  refreshHash: text('refresh_hash'),
+  refreshExpiresAt: timestamp('refresh_expires_at', { withTimezone: true }),
 }, (t) => [
   uniqueIndex('mcp_tokens_hash_idx').on(t.tokenHash),
   index('mcp_tokens_user_idx').on(t.userId, t.createdAt),
+  uniqueIndex('mcp_tokens_refresh_idx').on(t.refreshHash),
+  index('mcp_tokens_client_idx').on(t.clientId),
+])
+
+/**
+ * OAuth clients registered through Dynamic Client Registration (RFC 7591).
+ * Claude registers itself on first connect; public clients (PKCE, no secret).
+ */
+export const oauthClients = cookbook.table('oauth_clients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // A constraint, not just a unique index: the foreign keys below need it to
+  // exist when their tables are created, and drizzle emits indexes last.
+  clientId: text('client_id').notNull().unique('oauth_clients_client_id_key'),
+  name: text('name').notNull(),
+  redirectUris: text('redirect_uris').array().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/** A one-time authorization code, valid for minutes, bound to its PKCE challenge. Only the hash is stored. */
+export const oauthCodes = cookbook.table('oauth_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  codeHash: text('code_hash').notNull(),
+  clientId: text('client_id').notNull().references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  redirectUri: text('redirect_uri').notNull(),
+  codeChallenge: text('code_challenge').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('oauth_codes_hash_idx').on(t.codeHash),
+  index('oauth_codes_client_idx').on(t.clientId),
+  index('oauth_codes_user_idx').on(t.userId),
 ])
 
 /* -------------------------------------------------------------------------- */
