@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { suggestMealAiAction } from '@/app/_actions/ai'
 import { proposeMealAction, saveMealAction } from '@/app/_actions/journal'
 import { parseAmount } from '@/lib/amount'
@@ -77,7 +77,6 @@ export function MealLogger({
   const [error, setError] = useState<string | null>(null)
   const [proposing, startProposing] = useTransition()
   const [saving, startSaving] = useTransition()
-  const fileInput = useRef<HTMLInputElement>(null)
 
   const recipeIds = useMemo(
     () => dishes.map((d) => d.recipeId).filter((id): id is string => Boolean(id)),
@@ -155,7 +154,6 @@ export function MealLogger({
       setError('Không đọc được ảnh này. Thử ảnh khác nhé.')
     } finally {
       setPhotoBusy(false)
-      if (fileInput.current) fileInput.current.value = ''
     }
   }
 
@@ -250,14 +248,29 @@ export function MealLogger({
         <h1 className="text-center font-display text-xl font-extrabold">Ghi bữa</h1>
       </header>
 
-      {/* Photo */}
+      {/* Photo. Two inputs on purpose: `capture` opens the camera straight away
+          on iPhone, but then offers no library; without it iOS decides what to
+          show, and in the installed app that was not always the camera. */}
       <input
-        ref={fileInput}
-        id="meal-photo"
+        id="meal-photo-camera"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={(e) => {
+          void pickPhoto(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+      <input
+        id="meal-photo-library"
         type="file"
         accept="image/*"
         className="sr-only"
-        onChange={(e) => pickPhoto(e.target.files?.[0])}
+        onChange={(e) => {
+          void pickPhoto(e.target.files?.[0])
+          e.target.value = ''
+        }}
       />
       {photo ? (
         <div className="relative h-[240px] overflow-hidden rounded-[20px] border-2 border-ink bg-line-soft">
@@ -275,7 +288,13 @@ export function MealLogger({
               Bỏ ảnh
             </button>
             <label
-              htmlFor="meal-photo"
+              htmlFor="meal-photo-library"
+              className="flex h-9 cursor-pointer items-center rounded-full bg-surface/90 px-3 text-[13px] font-medium"
+            >
+              Ảnh khác
+            </label>
+            <label
+              htmlFor="meal-photo-camera"
               className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-surface/90 px-3 text-[13px] font-medium"
             >
               <CameraIcon size={15} />
@@ -283,14 +302,34 @@ export function MealLogger({
             </label>
           </div>
         </div>
+      ) : photoBusy ? (
+        <div role="status" className="flex h-[150px] items-center justify-center rounded-[20px] border-2 border-dashed border-line bg-surface text-sm text-muted">
+          Đang xử lý ảnh…
+        </div>
       ) : (
-        <label
-          htmlFor="meal-photo"
-          className="flex h-[150px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[20px] border-2 border-dashed border-line bg-surface text-muted hover:border-ink hover:text-ink"
-        >
-          <CameraIcon size={28} />
-          <span className="text-sm">{photoBusy ? 'Đang xử lý ảnh…' : 'Chụp hoặc chọn ảnh (không bắt buộc)'}</span>
-        </label>
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2.5">
+            <label
+              htmlFor="meal-photo-camera"
+              className="flex h-[112px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-ink bg-surface font-medium shadow-pop-sm"
+            >
+              <CameraIcon size={28} />
+              Chụp ảnh
+            </label>
+            <label
+              htmlFor="meal-photo-library"
+              className="flex h-[112px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-line bg-surface text-sm text-muted hover:border-ink hover:text-ink"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="9" cy="10" r="2" />
+                <path d="M21 16l-5-5-9 9" />
+              </svg>
+              Chọn từ thư viện
+            </label>
+          </div>
+          <span className="text-center text-xs text-muted">Ảnh không bắt buộc</span>
+        </div>
       )}
 
       {/* Dishes */}

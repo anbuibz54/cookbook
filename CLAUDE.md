@@ -201,6 +201,10 @@ The daily log, and the moment the pantry learns what was used. Mockups: page
   `createMeal` transaction). The descriptions make Claude show the proposed
   deductions and get the user's confirmation in between — "hỏi rồi mới trừ".
   Dish names resolve to a recipe by id, else by exact title. No photos over MCP.
+- **Taking the photo**: two file inputs, "Chụp ảnh" with `capture="environment"`
+  (opens the camera directly) and "Chọn từ thư viện" without. One plain
+  `accept="image/*"` input did not reliably offer the camera in the installed
+  iPhone app — the user could not take a photo from /log.
 - **Photos**: private bucket `cookbook-photos` (`pnpm storage:ensure`), path
   `<userId>/journal/<uuid>.jpg`, shrunk on the phone to 1600 px JPEG
   (`src/lib/photo.ts`) before a Server Action upload (body limit 5 MB in
