@@ -1,13 +1,15 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import {
-  addPantryItemAction,
-  removePantryItemAction,
-  updatePantryItemAction,
-  type KitchenFormState,
-} from '@/app/_actions/kitchen'
+import type { KitchenFormState } from '@/app/_actions/kitchen'
 import { AmountField, ExpiryField, IngredientNameField } from '@/components/kitchen-fields'
+import { runOrQueue } from '@/lib/offline-queue'
+
+/** " · 3 quả" for the "chờ gửi" list, when an amount was typed. */
+function amountLabel(form: FormData) {
+  const amount = String(form.get('amount') ?? '').trim()
+  return amount ? ` · ${amount}` : ''
+}
 
 /**
  * "+ Thêm đồ vào tủ": the hand-entry path, for when there is no AI to ask.
@@ -16,7 +18,12 @@ import { AmountField, ExpiryField, IngredientNameField } from '@/components/kitc
  */
 export function PantryAddForm({ today }: { today: string }) {
   const [open, setOpen] = useState(false)
-  const [state, action, pending] = useActionState<KitchenFormState, FormData>(addPantryItemAction, {})
+  const [state, action, pending] = useActionState<KitchenFormState & { queued?: boolean }, FormData>(async (_prev, form) => {
+    // Offline: kept on the phone and sent later (src/lib/offline-queue.ts).
+    const name = String(form.get('name') ?? '').trim()
+    const run = await runOrQueue({ kind: 'pantry.add', label: `thêm ${name}${amountLabel(form)}`, form })
+    return run.queued ? { done: Date.now(), queued: true } : ((run.result ?? {}) as KitchenFormState)
+  }, {})
 
   if (!open) {
     return (
@@ -48,7 +55,7 @@ export function PantryAddForm({ today }: { today: string }) {
         </p>
       ) : state.done ? (
         <p role="status" className="text-sm text-muted">
-          Đã thêm. Nhập tiếp món khác nhé.
+          {state.queued ? 'Đang mất mạng: đã lưu tạm trên máy, có mạng sẽ tự gửi. Nhập tiếp nhé.' : 'Đã thêm. Nhập tiếp món khác nhé.'}
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-2.5">
@@ -83,7 +90,12 @@ export type PantryRowView = {
 export function PantryItemRow({ item, first, today }: { item: PantryRowView; first: boolean; today: string }) {
   const [editing, setEditing] = useState(false)
   const [state, action, pending] = useActionState<KitchenFormState, FormData>(async (prev, form) => {
-    const next = await updatePantryItemAction(item.id, prev, form)
+    const run = await runOrQueue({ kind: 'pantry.update', itemId: item.id, label: `sửa ${item.name}${amountLabel(form)}`, form })
+    if (run.queued) {
+      setEditing(false)
+      return { done: Date.now() }
+    }
+    const next = (run.result ?? {}) as KitchenFormState
     const unchanged =
       String(form.get('amount') ?? '').trim() === item.amount && String(form.get('expiresOn') ?? '') === (item.expiresOn ?? '')
     if (next.done && unchanged) setEditing(false)
@@ -109,7 +121,7 @@ export function PantryItemRow({ item, first, today }: { item: PantryRowView; fir
             <button
               type="button"
               onClick={async () => {
-                if (window.confirm(`Bỏ ${item.name} khỏi tủ?`)) await removePantryItemAction(item.id)
+                if (window.confirm(`Bỏ ${item.name} khỏi tủ?`)) await runOrQueue({ kind: 'pantry.remove', itemId: item.id, label: `bỏ ${item.name} khỏi tủ` })
               }}
               className="h-10 px-1 text-sm text-muted hover:text-primary"
             >

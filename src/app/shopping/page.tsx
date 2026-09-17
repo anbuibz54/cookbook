@@ -1,5 +1,6 @@
 import { clearBoughtAction, setBoughtAction } from '@/app/_actions/kitchen'
 import { ShoppingAddForm, ShoppingLineRow, type StoreChoice } from './shopping-editor'
+import { PendingOps } from '@/components/offline-sync'
 import { PageTransition } from '@/components/page-transition'
 import { requireUser } from '@/lib/auth/dal'
 import { formatQuantity } from '@/lib/units'
@@ -83,6 +84,7 @@ export default async function ShoppingPage() {
         </header>
 
         <ShoppingAddForm choices={choices} />
+        <PendingOps scope="shopping" />
 
         {open.length === 0 && bought.length === 0 ? (
           <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">

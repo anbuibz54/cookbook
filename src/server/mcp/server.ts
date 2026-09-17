@@ -30,7 +30,10 @@ import {
   type FullRecipe,
 } from '../recipes/service'
 import { createFood, createFoodInput, foodLabel, searchFoods } from '../foods/service'
-import { createWish, wishInput } from '../motivation/service'
+import { createWish, streakCards, wishInput } from '../motivation/service'
+import { createMeal, mealInput, proposeMeal, recipeChoices } from '../journal/service'
+import { vnDate } from '@/lib/dates'
+import { normalizeForSearch } from '@/lib/text'
 import {
   listPantry,
   pantryItemInput,
@@ -748,6 +751,131 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
       } catch (error) {
         return text(`Rejected — ${error instanceof Error ? error.message : 'could not save'}`)
       }
+    },
+  )
+
+  /* ------------------------------------------------------------------ journal */
+
+  const dishShape = z.object({
+    name: z.string().describe('Tên món như người dùng nói: "canh chua cá lóc".'),
+    recipe_id: z.string().optional().describe('Id từ search_recipes nếu món có trong sổ. Bỏ trống thì app tự khớp theo đúng tên công thức.'),
+  })
+
+  /** A dish's recipe: the id given (if it is the user's), else a recipe with exactly this title. */
+  async function resolveDishes(dishes: z.infer<typeof dishShape>[]) {
+    const recipes = await recipeChoices(db, principal.userId)
+    return dishes.map((d) => {
+      const byId = d.recipe_id ? recipes.find((r) => r.id === d.recipe_id) : undefined
+      const byTitle = recipes.find((r) => normalizeForSearch(r.title) === normalizeForSearch(d.name))
+      const recipe = byId ?? byTitle
+      return { name: recipe?.title ?? d.name.trim(), recipeId: recipe?.id ?? null }
+    })
+  }
+
+  server.registerTool(
+    'propose_meal',
+    {
+      title: 'Prepare logging a meal',
+      description:
+        'Step 1 of logging what the user cooked ("tối nay nấu canh chua", "vừa làm bánh táo xong"). Returns what the ' +
+        'recipes in the sổ say was used from the pantry and what was probably bought, the full pantry with ids, and ' +
+        'the streaks that can be ticked. Nothing is saved.\n\n' +
+        'Then SHOW the user the proposed pantry use in plain words and ask them to confirm or correct amounts before ' +
+        'calling log_meal — logging takes food out of the pantry, and the user decided "hỏi rồi mới trừ". For dishes ' +
+        'without a recipe, propose pantry items yourself from the pantry list, but only ids that are on it. ' +
+        'Seasoning with no amount ("nước mắm vừa ăn") should not be deducted unless the user says it ran out.',
+      inputSchema: {
+        dishes: z.array(dishShape).min(1).max(10),
+      },
+    },
+    async ({ dishes }) => {
+      const resolved = await resolveDishes(dishes)
+      const recipeIds = resolved.map((d) => d.recipeId).filter((id): id is string => Boolean(id))
+      const [proposal, pantry, streaks] = await Promise.all([
+        proposeMeal(db, principal.userId, recipeIds),
+        listPantry(db, principal.userId),
+        streakCards(db, principal.userId),
+      ])
+      const today = vnDate()
+      const usable = pantry.filter((p) => p.expiresOn == null || p.expiresOn >= today)
+      const amount = (q: number | null, u: string | null) => (q != null ? `${formatQuantity(q)}${u ? ` ${u}` : ''}` : 'còn')
+
+      const lines = [
+        'Món:',
+        ...resolved.map((d) => `- ${d.name}${d.recipeId ? ` (công thức ${d.recipeId})` : ' (không có công thức)'}`),
+        '',
+        'Đề xuất dùng từ tủ (theo công thức):',
+        ...(proposal.used.length
+          ? proposal.used.map(
+              (u) => `- ${u.pantryItemId} · ${u.name} · dùng ${u.amount || '(không ghi lượng — mặc định không trừ)'}${u.have ? ` · tủ còn ${u.have}` : ''} · cho ${u.forDish}`,
+            )
+          : ['- (không có)']),
+        '',
+        'Đề xuất mua thêm (công thức cần, tủ không có):',
+        ...(proposal.bought.length ? proposal.bought.map((b) => `- ${b.name} · ${b.amount} · cho ${b.forDish}`) : ['- (không có)']),
+        '',
+        'Tủ lạnh hiện có (id · tên · lượng):',
+        ...(usable.length ? usable.map((p) => `- ${p.id} · ${p.name} · ${amount(p.quantity, p.unit)}`) : ['- (trống)']),
+        '',
+        'Streak tick được khi ghi bữa (id · tên · hôm nay):',
+        ...(streaks.filter((s) => s.trigger === 'tick').map((s) => `- ${s.id} · ${s.name} · ${s.doneToday ? 'đã tick' : 'chưa tick'}`) || []),
+        ...streaks.filter((s) => s.trigger !== 'tick').map((s) => `- (tự tính) ${s.name}`),
+      ]
+      return text(lines.join('\n'))
+    },
+  )
+
+  server.registerTool(
+    'log_meal',
+    {
+      title: 'Log a meal and update the pantry',
+      description:
+        'Step 2: save the meal to the journal and apply it to the kitchen, after the user confirmed (see propose_meal). ' +
+        'In one transaction: the journal entry, pantry deductions, ticks on matching shopping-list lines, ticked ' +
+        'streaks, and wishes on the "muốn chinh phục" board this meal conquers.\n\n' +
+        'Amounts are free text like the app: "400 g", "2 quả", "nửa bó", "hết" (used it all). An empty amount records ' +
+        'the item without deducting. Deduction happens in grams when both sides can be weighed, else in the pantry\'s ' +
+        'own unit; otherwise the item is left untouched and reported — tell the user which. Photos can only be added ' +
+        'in the app.',
+      inputSchema: {
+        dishes: z.array(dishShape).min(1).max(10),
+        cooked_on: z.string().optional().describe('YYYY-MM-DD, Vietnam date. Default today. "tối qua" = yesterday.'),
+        note: z.string().optional().describe('Lời người dùng về bữa ăn, nếu có.'),
+        used: z
+          .array(z.object({ pantry_item_id: z.string(), amount: z.string() }))
+          .optional()
+          .describe('Pantry items used, ids from propose_meal / list_pantry, as the user confirmed.'),
+        bought: z
+          .array(z.object({ name: z.string(), amount: z.string().optional() }))
+          .optional()
+          .describe('Bought for this meal (not added to the pantry).'),
+        streak_ids: z.array(z.string()).optional().describe('Tick streaks the user wants counted (ids from propose_meal).'),
+      },
+    },
+    async ({ dishes, cooked_on, note, used, bought, streak_ids }) => {
+      const parsed = mealInput.safeParse({
+        cookedOn: cooked_on ?? vnDate(),
+        dishes: await resolveDishes(dishes),
+        note: note ?? null,
+        used: (used ?? []).map((u) => ({ pantryItemId: u.pantry_item_id, amount: u.amount })),
+        bought: (bought ?? []).map((b) => ({ name: b.name, amount: b.amount ?? '' })),
+        streakIds: streak_ids ?? [],
+      })
+      if (!parsed.success) return text(`Rejected — ${firstIssue(parsed.error)}`)
+      if (parsed.data.cookedOn > vnDate()) return text('Rejected — cooked_on is in the future.')
+
+      const result = await createMeal(db, principal.userId, parsed.data, null)
+      const { reduced, removed, unchanged } = result.pantry
+      const lines = [
+        `Đã ghi bữa ${parsed.data.dishes.map((d) => d.name).join(', ')} (${parsed.data.cookedOn}).`,
+        reduced.length ? `Trừ bớt trong tủ: ${reduced.join(', ')}.` : null,
+        removed.length ? `Đã hết, bỏ khỏi tủ: ${removed.join(', ')}.` : null,
+        unchanged.length ? `Chưa trừ được (khác đơn vị với trong tủ): ${unchanged.join(', ')}.` : null,
+        result.conquered.length ? `Chinh phục món trên bảng: ${result.conquered.join(', ')}!` : null,
+        '',
+        `${baseUrl}/journal/${result.entryId}`,
+      ]
+      return text(lines.filter((l) => l !== null).join('\n'))
     },
   )
 

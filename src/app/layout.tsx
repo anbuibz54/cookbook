@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Baloo_2, JetBrains_Mono, Lexend } from 'next/font/google'
 import { ServiceWorker } from '@/components/service-worker'
+import { OfflineSync } from '@/components/offline-sync'
 import { TabBar } from '@/components/tab-bar'
 import './globals.css'
 
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
         {/* In the layout, not the pages: it must not slide with them. */}
         <TabBar />
         <ServiceWorker />
+        <OfflineSync />
       </body>
     </html>
   )

@@ -160,7 +160,16 @@ shop needs web search and local knowledge, so it is Claude's, through
 - **iOS date inputs** overflow grids and centre their text: globals.css resets
   them. They also cannot show a placeholder, so `ExpiryField` overlays one and
   offers +3 ngày / +1 tuần / +1 tháng.
-  Writing still needs a network connection; there is no offline queue.
+- **Offline** (`src/lib/offline-queue.ts`, `src/components/offline-sync.tsx`):
+  pantry and shopping edits go through `runOrQueue` — run now, or on a network
+  failure keep the op in localStorage and replay it in order when online
+  (`online` event + every 30 s, since iOS fires `online` unreliably). Ops the
+  server rejects are dropped and reported, never retried forever. A bar above
+  the tab bar says offline / N waiting; each screen lists "Chờ gửi" ops.
+  Ticking "đã mua" is optimistic. Scope is deliberately kitchen-only; meal
+  logging (photos, cross-item pantry maths) stays online. Known limit: a
+  request that reached the server but lost its reply replays twice.
+  Test offline with Playwright `context.setOffline(true)`.
 - After cooking, the pantry is updated by logging the meal (see Journal).
   `/recipes/[id]/done` only redirects to `/log?recipe=<id>` now.
 
@@ -168,9 +177,9 @@ shop needs web search and local knowledge, so it is Claude's, through
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
 "Nhật ký & động lực" in the design canvas. Planned phases: 1 journal (done) →
-2 streaks, goals, wish board, photo wall, "Thành tích" tab (done) → 3 in-app AI (done) → 4 reminders (done) → 5 share card (done)
+2 streaks, goals, wish board, photo wall, "Thành tích" tab → 3 in-app AI
 (multi-provider, keys encrypted per user) → 4 web push reminders per streak
-→ 5 monthly share card.
+→ 5 monthly share card. All five done.
 
 - **journal_entries** (`cooked_on` is a Vietnam-calendar date, see
   `src/lib/dates.ts`), **journal_dishes** (`recipe_id` null = no recipe;
@@ -187,6 +196,11 @@ The daily log, and the moment the pantry learns what was used. Mockups: page
 - Bought items tick open shopping lines one way only ("hành lá tươi" ticks
   "hành lá"; "hành" does not tick "hành tây").
 - Deleting a meal does not refill the pantry, and the confirm says so.
+- **Over MCP** (added 2026-09-17): `propose_meal` (recipes × pantry proposal,
+  the pantry with ids, tickable streaks; saves nothing) then `log_meal` (same
+  `createMeal` transaction). The descriptions make Claude show the proposed
+  deductions and get the user's confirmation in between — "hỏi rồi mới trừ".
+  Dish names resolve to a recipe by id, else by exact title. No photos over MCP.
 - **Photos**: private bucket `cookbook-photos` (`pnpm storage:ensure`), path
   `<userId>/journal/<uuid>.jpg`, shrunk on the phone to 1600 px JPEG
   (`src/lib/photo.ts`) before a Server Action upload (body limit 5 MB in
@@ -297,12 +311,12 @@ ships one.
 
 ## MCP (`src/server/mcp/server.ts`)
 
-Fourteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
+Sixteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
 `create_recipe`, `update_recipe` (full-list replacement, snapshots history).
 Foods: `search_foods`, `create_food`. Kitchen: `list_pantry`,
 `save_pantry_items`, `remove_pantry_items`, `suggest_from_pantry`,
 `get_shopping_list`, `add_to_shopping_list`, `assign_shopping_stores`.
-Motivation: `add_wish`.
+Motivation: `add_wish`. Journal: `propose_meal`, `log_meal`.
 
 **Descriptions are the prompt** — the product rules (link foods, label estimates
 honestly, credit sources, rewrite steps in own words, ask where the user lives

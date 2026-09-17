@@ -7,6 +7,7 @@ import { db } from '@/server/db'
 import { listPantry, suggestFromPantry } from '@/server/pantry/service'
 import { vnDate } from '@/lib/dates'
 import { PantryAddForm, PantryItemRow } from './pantry-editor'
+import { PendingOps } from '@/components/offline-sync'
 
 /** Days at which a date starts being worth shouting about. */
 const SOON = 3
@@ -39,6 +40,7 @@ export default async function PantryPage() {
         </header>
 
         <PantryAddForm today={vnDate()} />
+        <PendingOps scope="pantry" />
 
         {items.length === 0 ? (
           <p className="rounded-[18px] border border-dashed border-line px-5 py-8 text-center text-pretty text-muted">

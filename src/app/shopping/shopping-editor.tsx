@@ -1,14 +1,15 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import {
-  addShoppingItemAction,
-  removeShoppingItemAction,
-  setBoughtAction,
-  updateShoppingItemAction,
-  type KitchenFormState,
-} from '@/app/_actions/kitchen'
+import type { KitchenFormState } from '@/app/_actions/kitchen'
+import { runOrQueue } from '@/lib/offline-queue'
 import { AmountField, fieldClass, IngredientNameField } from '@/components/kitchen-fields'
+
+/** " · 3 quả" for the "chờ gửi" list, when an amount was typed. */
+function amountLabel(form: FormData) {
+  const amount = String(form.get('amount') ?? '').trim()
+  return amount ? ` · ${amount}` : ''
+}
 
 export type StoreChoice = { value: string; label: string }
 
@@ -47,7 +48,11 @@ export function ShoppingAddForm({ choices }: { choices: StoreChoice[] }) {
   const [open, setOpen] = useState(false)
   // Kept across saves: the next item is usually from the same shop.
   const [store, setStore] = useState('')
-  const [state, action, pending] = useActionState<KitchenFormState, FormData>(addShoppingItemAction, {})
+  const [state, action, pending] = useActionState<KitchenFormState & { queued?: boolean }, FormData>(async (_prev, form) => {
+    const name = String(form.get('name') ?? '').trim()
+    const run = await runOrQueue({ kind: 'shopping.add', label: `cần mua ${name}${amountLabel(form)}`, form })
+    return run.queued ? { done: Date.now(), queued: true } : ((run.result ?? {}) as KitchenFormState)
+  }, {})
 
   if (!open) {
     return (
@@ -77,7 +82,7 @@ export function ShoppingAddForm({ choices }: { choices: StoreChoice[] }) {
         </p>
       ) : state.done ? (
         <p role="status" className="text-sm text-muted">
-          Đã thêm. Nhập tiếp món khác nhé.
+          {state.queued ? 'Đang mất mạng: đã lưu tạm trên máy, có mạng sẽ tự gửi. Nhập tiếp nhé.' : 'Đã thêm. Nhập tiếp món khác nhé.'}
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-2.5">
@@ -108,8 +113,15 @@ export type ShoppingRowView = {
  */
 export function ShoppingLineRow({ line, first, choices }: { line: ShoppingRowView; first: boolean; choices: StoreChoice[] }) {
   const [editing, setEditing] = useState(false)
+  // Shown ticked at once; the server (or the offline queue) catches up.
+  const [ticked, setTicked] = useState(false)
   const [state, action, pending] = useActionState<KitchenFormState, FormData>(async (prev, form) => {
-    const next = await updateShoppingItemAction(line.id, prev, form)
+    const run = await runOrQueue({ kind: 'shopping.update', itemId: line.id, label: `sửa ${line.name}${amountLabel(form)}`, form })
+    if (run.queued) {
+      setEditing(false)
+      return { done: Date.now() }
+    }
+    const next = (run.result ?? {}) as KitchenFormState
     const unchanged =
       String(form.get('amount') ?? '').trim() === line.amount && String(form.get('store') ?? '') === line.storeValue
     if (next.done && unchanged) setEditing(false)
@@ -134,7 +146,7 @@ export function ShoppingLineRow({ line, first, choices }: { line: ShoppingRowVie
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={() => removeShoppingItemAction(line.id)}
+              onClick={() => runOrQueue({ kind: 'shopping.remove', itemId: line.id, label: `bỏ ${line.name} khỏi danh sách` })}
               className="h-10 px-1 text-sm text-muted hover:text-primary"
             >
               Bỏ khỏi danh sách
@@ -154,10 +166,33 @@ export function ShoppingLineRow({ line, first, choices }: { line: ShoppingRowVie
   }
 
   return (
-    <li className={`flex items-center gap-3 py-2.5 ${border}`}>
-      <form action={setBoughtAction.bind(null, line.id, true)} className="flex">
-        <button type="submit" aria-label={`Đánh dấu đã mua ${line.name}`} className="size-6 shrink-0 rounded-full border-2 border-ink" />
-      </form>
+    <li className={`flex items-center gap-3 py-2.5 ${border} ${ticked ? 'opacity-50' : ''}`}>
+      <button
+        type="button"
+        aria-pressed={ticked}
+        disabled={ticked}
+        aria-label={`Đánh dấu đã mua ${line.name}`}
+        onClick={async () => {
+          setTicked(true)
+          try {
+            await runOrQueue({
+              kind: 'shopping.bought',
+              itemId: line.id,
+              label: `đã mua ${line.name}`,
+              fields: { bought: 'true' },
+            })
+          } catch {
+            setTicked(false)
+          }
+        }}
+        className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-ink ${ticked ? 'bg-ink text-background' : ''}`}
+      >
+        {ticked ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 12l5 5 9-10" />
+          </svg>
+        ) : null}
+      </button>
       <button
         type="button"
         onClick={() => setEditing(true)}
