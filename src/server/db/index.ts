@@ -10,6 +10,8 @@
  * cookbook page fans out more than three queries at once; raise this if one
  * starts to.
  *
+ * `idle_timeout` is not optional here: see the comment in createClient.
+ *
  * No `next/*` imports.
  */
 
@@ -27,7 +29,17 @@ if (!connectionString) {
 }
 
 function createClient() {
-  return postgres(connectionString!, { prepare: false, max: 3 })
+  return postgres(connectionString!, {
+    prepare: false,
+    max: 3,
+    // Give idle connections back. The Supabase session pooler allows 15 clients
+    // for the whole project (LifeOS + cookbook + bakery), and each Vercel
+    // instance keeps its own pool; without this they sat on their slots until
+    // the instance died and every app got EMAXCONNSESSION (hit 2026-09-18).
+    idle_timeout: 20,
+    max_lifetime: 60 * 10,
+    connect_timeout: 15,
+  })
 }
 
 /** Reuse the pool across hot reloads in dev, or the connection limit goes in a minute. */
