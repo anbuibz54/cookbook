@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { clearBoughtAction, setBoughtAction } from '@/app/_actions/kitchen'
 import { ShoppingAddForm, ShoppingLineRow, type StoreChoice } from './shopping-editor'
 import { PendingOps } from '@/components/offline-sync'
@@ -76,11 +77,24 @@ export default async function ShoppingPage() {
   return (
     <PageTransition>
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-[18px] pt-6 pb-32">
-        <header className="flex items-baseline justify-between">
-          <h1 className="font-display text-[30px] leading-none font-extrabold">Đi chợ</h1>
-          <span className="font-mono text-sm text-muted">
-            {open.length} món{bought.length > 0 ? ` · ${bought.length} đã mua` : ''}
-          </span>
+        <header className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-[30px] leading-none font-extrabold">Đi chợ</h1>
+            <span className="font-mono text-sm text-muted">
+              {open.length} món{bought.length > 0 ? ` · ${bought.length} đã mua` : ''}
+            </span>
+          </div>
+          <Link
+            href="/receipts/new?tu=shopping"
+            transitionTypes={['nav-forward']}
+            className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-surface px-3 py-1.5 text-[13px] font-medium shadow-pop-sm"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+              <path d="M9 8h6M9 12h6" />
+            </svg>
+            Chụp hóa đơn
+          </Link>
         </header>
 
         <ShoppingAddForm choices={choices} />

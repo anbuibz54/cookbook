@@ -173,6 +173,38 @@ shop needs web search and local knowledge, so it is Claude's, through
 - After cooking, the pantry is updated by logging the meal (see Journal).
   `/recipes/[id]/done` only redirects to `/log?recipe=<id>` now.
 
+## Receipts (built 2026-09-18, shared with the bakery)
+
+Photograph a Bách Hóa Xanh / supermarket / market receipt → AI reads it → the
+cook checks → one button fills the pantry and ticks the shopping list. Built
+together with the bakery: lines marked "giá cho tiệm bánh" become the bakery's
+ingredient prices.
+
+- **receipts** (store, kind, date, printed total, photo in `cookbook-photos`
+  under `<userId>/receipts/`, `source` photo | mcp | hand, `applied_at`) and
+  **receipt_lines** (printed text, clean name, quantity + unit, line total,
+  `kind` food | other, `to_pantry`, `shopping_item_id`, `for_bakery`).
+- Entry: "Chụp hóa đơn" on /pantry and /shopping → `/receipts/new` (camera +
+  library inputs; photo shrunk to 2400 px — receipt print is small) →
+  `/receipts/[id]` review → apply.
+- **AI** (`src/server/receipts/service.ts`, same provider as the meal log): the
+  prompt gets the pantry and open shopping names and must reuse them, so a
+  purchase adds up instead of creating "trứng gà hộp 10 quả" next to "trứng gà".
+  Weights in the product name ("BO ANCHOR 227G") become the quantity. Discount
+  lines are folded into the line above. ~10 s for a 6-line receipt on
+  gpt-5.4-mini. `cleanParsed` guards dates, money and units.
+- **Apply** is one transaction with a claim (`applied_at` set only where it was
+  null), so a double tap applies nothing twice. Pantry: amounts ADD when the
+  units convert (6 + 10 quả = 16; 500 g + 1 kg = 1500 g), otherwise the new
+  amount replaces the old; existing expiry dates are kept. Shopping: the line
+  the cook picked is ticked; the suggestion uses the meal log's one-way rule.
+- Amounts in the review form are exact (`amountText`), not the kitchen's
+  friendly fractions — `formatQuantity` turned 0.512 kg into ½ kg.
+- MCP `record_receipt`: Claude reads the receipt in chat, shows it, gets a yes,
+  then one call creates and applies it.
+- The bakery repo reads applied `for_bakery` lines (read-only) and keeps the
+  line id on its price row, so each line is imported once.
+
 ## Journal (phase 1 of "nhật ký & động lực", built 2026-09-16)
 
 The daily log, and the moment the pantry learns what was used. Mockups: page
@@ -315,12 +347,12 @@ ships one.
 
 ## MCP (`src/server/mcp/server.ts`)
 
-Sixteen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
+Seventeen tools. Recipes: `search_recipes`, `get_recipe` (optional scaling),
 `create_recipe`, `update_recipe` (full-list replacement, snapshots history).
 Foods: `search_foods`, `create_food`. Kitchen: `list_pantry`,
 `save_pantry_items`, `remove_pantry_items`, `suggest_from_pantry`,
 `get_shopping_list`, `add_to_shopping_list`, `assign_shopping_stores`.
-Motivation: `add_wish`. Journal: `propose_meal`, `log_meal`.
+Motivation: `add_wish`. Journal: `propose_meal`, `log_meal`. Receipts: `record_receipt`.
 
 **Descriptions are the prompt** — the product rules (link foods, label estimates
 honestly, credit sources, rewrite steps in own words, ask where the user lives

@@ -667,3 +667,63 @@ export const pushSubscriptions = cookbook.table('push_subscriptions', {
   uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint),
   index('push_subscriptions_user_idx').on(t.userId),
 ])
+
+/* -------------------------------------------------------------------------- */
+/* Receipts                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A shopping receipt (Bách Hóa Xanh, siêu thị, chợ), read from a photo by AI or
+ * sent by Claude over MCP. Applying it fills the pantry and ticks the shopping
+ * list in one go; lines flagged `forBakery` are also the bakery's price source.
+ *
+ * Draft until `appliedAt` is set: the AI only proposes, the cook confirms.
+ *
+ * The bakery repo READS applied lines with `forBakery` to record ingredient
+ * prices (it keeps the line id, so each line is imported once). It never
+ * writes here — each app writes only its own schema.
+ */
+export const receipts = cookbook.table('receipts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storeName: text('store_name'),
+  storeKind: storeKindEnum('store_kind'),
+  boughtOn: date('bought_on').notNull(),
+  /** Total printed on the receipt, to check the lines add up. */
+  totalVnd: integer('total_vnd'),
+  /** In the `cookbook-photos` bucket, like meal photos. */
+  photoPath: text('photo_path'),
+  /** 'photo' | 'mcp' | 'hand' */
+  source: text('source').notNull().default('photo'),
+  appliedAt: timestamp('applied_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('receipts_user_idx').on(t.userId, t.boughtOn),
+])
+
+/**
+ * One line of a receipt. `name` is the cleaned-up Vietnamese name the pantry
+ * uses ("thịt ba chỉ"); `rawText` is what was printed ("BA CHI HEO VISSAN 500G").
+ * `priceVnd` is the line total as paid.
+ */
+export const receiptLines = cookbook.table('receipt_lines', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  receiptId: uuid('receipt_id').notNull().references(() => receipts.id, { onDelete: 'cascade' }),
+  position: smallint('position').notNull(),
+  rawText: text('raw_text'),
+  name: text('name').notNull(),
+  quantity: real('quantity'),
+  unit: text('unit'),
+  priceVnd: integer('price_vnd'),
+  /** 'food' goes to the pantry by default; 'other' (túi, nước rửa chén) does not. */
+  kind: text('kind').notNull().default('food'),
+  toPantry: boolean('to_pantry').notNull().default(true),
+  /** The shopping-list line this purchase ticks off, if any. */
+  shoppingItemId: uuid('shopping_item_id').references(() => shoppingItems.id, { onDelete: 'set null' }),
+  /** Also an ingredient price for the bakery. */
+  forBakery: boolean('for_bakery').notNull().default(false),
+}, (t) => [
+  index('receipt_lines_receipt_idx').on(t.receiptId, t.position),
+  index('receipt_lines_shopping_idx').on(t.shoppingItemId),
+  index('receipt_lines_bakery_idx').on(t.receiptId).where(sql`${t.forBakery}`),
+])

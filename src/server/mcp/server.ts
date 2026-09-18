@@ -32,6 +32,7 @@ import {
 import { createFood, createFoodInput, foodLabel, searchFoods } from '../foods/service'
 import { createWish, streakCards, wishInput } from '../motivation/service'
 import { createMeal, mealInput, proposeMeal, recipeChoices } from '../journal/service'
+import { amountText, applyReceipt, cleanParsed, createReceipt, getReceipt } from '../receipts/service'
 import { vnDate } from '@/lib/dates'
 import { normalizeForSearch } from '@/lib/text'
 import {
@@ -876,6 +877,82 @@ export function buildMcpServer(db: Db, principal: Principal, baseUrl: string) {
         `${baseUrl}/journal/${result.entryId}`,
       ]
       return text(lines.filter((l) => l !== null).join('\n'))
+    },
+  )
+
+  server.registerTool(
+    'record_receipt',
+    {
+      title: 'Record a shopping receipt into the pantry',
+      description:
+        'The user bought groceries and shows or describes the receipt (Bách Hóa Xanh, siêu thị, chợ, a baking-supply shop). ' +
+        'Read every line yourself and call this once. It adds the food to the pantry (adding to what is already there when ' +
+        'units match), ticks matching lines on the shopping list, and — for lines with for_bakery — records the price for ' +
+        "the user's bakery costing. Show the user what you read and get a yes BEFORE calling: this changes the pantry.\n\n" +
+        'Amounts: quantity + unit as bought ("0.512 kg", "10 quả", "1 hộp"). price_vnd is the line total actually paid, an ' +
+        'integer (Vietnamese receipts write 45.000 for 45000). Skip totals, change, VAT and loyalty points. kind "other" ' +
+        'for non-food (túi, nước rửa chén) — those never go to the pantry.',
+      inputSchema: {
+        store: z.string().optional().describe('Store name as printed.'),
+        bought_on: z.string().optional().describe('YYYY-MM-DD, Vietnam date. Default today.'),
+        total_vnd: z.number().optional().describe('Total printed on the receipt, to check the lines.'),
+        for_bakery: z.boolean().optional().describe('Whole receipt is for the bakery (default false).'),
+        lines: z
+          .array(
+            z.object({
+              name: z.string().describe('Vietnamese name the cook would use: "thịt ba chỉ", "trứng gà", "bơ lạt Anchor".'),
+              quantity: z.number().optional(),
+              unit: z.string().optional(),
+              price_vnd: z.number().optional(),
+              kind: z.enum(['food', 'other']).optional(),
+              raw: z.string().optional().describe('The line as printed.'),
+              for_bakery: z.boolean().optional(),
+            }),
+          )
+          .min(1)
+          .max(60),
+      },
+    },
+    async ({ store, bought_on, total_vnd, for_bakery, lines }) => {
+      const parsed = cleanParsed({
+        storeName: store ?? null,
+        date: bought_on ?? null,
+        totalVnd: total_vnd ?? null,
+        lines: lines.map((l) => ({ rawText: l.raw ?? null, name: l.name, quantity: l.quantity ?? null, unit: l.unit ?? null, priceVnd: l.price_vnd ?? null, kind: l.kind ?? 'food' })),
+      })
+      if (parsed.lines.length === 0) return text('Rejected — no readable lines.')
+
+      const receiptId = await createReceipt(db, principal.userId, parsed, { photoPath: null, source: 'mcp', forBakery: for_bakery ?? false })
+      const draft = await getReceipt(db, principal.userId, receiptId)
+      if (!draft) return text('Rejected — receipt vanished.')
+
+      const result = await applyReceipt(db, principal.userId, receiptId, {
+        storeName: parsed.storeName,
+        storeKind: parsed.storeKind,
+        boughtOn: parsed.boughtOn,
+        lines: draft.lines.map((l, i) => ({
+          id: l.id,
+          name: l.name,
+          amount: amountText(l.quantity, l.unit),
+          priceVnd: l.priceVnd,
+          toPantry: l.toPantry,
+          shoppingItemId: l.shoppingItemId,
+          forBakery: l.forBakery || Boolean(lines[i]?.for_bakery),
+        })),
+      })
+      const sum = parsed.lines.reduce((s, l) => s + (l.priceVnd ?? 0), 0)
+      const out = [
+        `Đã ghi hóa đơn ${parsed.storeName ?? ''} (${parsed.boughtOn}), ${parsed.lines.length} dòng.`,
+        result.added.length ? `Thêm vào tủ: ${result.added.join(', ')}.` : null,
+        result.increased.length ? `Cộng thêm trong tủ: ${result.increased.join(', ')}.` : null,
+        result.ticked.length ? `Tick đi chợ: ${result.ticked.join(', ')}.` : null,
+        result.forBakery ? `${result.forBakery} giá gửi sang tiệm bánh (nhập ở trang Nguyên liệu của tiệm).` : null,
+        parsed.totalVnd != null && Math.abs(parsed.totalVnd - sum) >= 1000
+          ? `Lưu ý: cộng các dòng ${sum}đ, hóa đơn ghi ${parsed.totalVnd}đ.`
+          : null,
+        `Xem trong app: /receipts/${receiptId}`,
+      ]
+      return text(out.filter(Boolean).join('\n'))
     },
   )
 
